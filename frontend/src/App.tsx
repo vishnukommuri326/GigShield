@@ -1,19 +1,28 @@
 import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
+import LandingPage from './pages/LandingPage';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState('landing');
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'landing':
+        return <LandingPage onNavigate={setCurrentPage} />;
       case 'dashboard':
         return <Dashboard onNavigate={setCurrentPage} />;
       default:
-        return <Dashboard onNavigate={setCurrentPage} />;
+        return <LandingPage onNavigate={setCurrentPage} />;
     }
   };
 
+  // Show landing page without sidebar
+  if (currentPage === 'landing') {
+    return <LandingPage onNavigate={setCurrentPage} />;
+  }
+
+  // Show authenticated pages with sidebar
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
