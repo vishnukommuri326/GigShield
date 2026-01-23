@@ -68,7 +68,7 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-[30]">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-blue-600 rounded-lg p-2">
@@ -77,9 +77,14 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
             <span className="text-2xl font-bold text-slate-900">AppealShield</span>
           </div>
           <nav className="hidden md:flex items-center gap-8">
-            <a href="#how-it-works" className="text-slate-600 hover:text-slate-900 transition-colors">
+            <button 
+              onClick={() => {
+                document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="text-slate-600 hover:text-slate-900 transition-colors"
+            >
               How It Works
-            </a>
+            </button>
             <a href="#platforms" className="text-slate-600 hover:text-slate-900 transition-colors">
               Platforms
             </a>
@@ -125,7 +130,12 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
             Start Your Appeal
             <ArrowRight className="w-5 h-5" />
           </button>
-          <button className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-blue-50 transition-colors">
+          <button 
+            onClick={() => {
+              document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-blue-50 transition-colors"
+          >
             See How It Works
           </button>
         </div>
