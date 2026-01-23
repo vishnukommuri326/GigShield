@@ -21,10 +21,10 @@ const Sidebar = ({ currentPage, onNavigate }: SidebarProps) => {
 
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { id: 'analyzer', icon: FileText, label: 'Lease Analyzer' },
-    { id: 'chat', icon: MessageSquare, label: 'Rights Chat' },
+    { id: 'analyzer', icon: FileText, label: 'Deactivation Analyzer' },
+    { id: 'chat', icon: MessageSquare, label: 'Appeal Assistant' },
     { id: 'letters', icon: FileEdit, label: 'Letter Generator' },
-    { id: 'evidence', icon: Camera, label: 'Evidence Logger' },
+    { id: 'evidence', icon: Camera, label: 'Evidence Tracker' },
     { id: 'resources', icon: BookOpen, label: 'Resources' },
   ];
 
@@ -39,7 +39,7 @@ const Sidebar = ({ currentPage, onNavigate }: SidebarProps) => {
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <Shield className="w-8 h-8 text-[#0d9488]" />
-            <span className="text-xl font-bold">RentShield</span>
+            <span className="text-xl font-bold">AppealShield</span>
           </div>
         )}
         <button
@@ -77,7 +77,7 @@ const Sidebar = ({ currentPage, onNavigate }: SidebarProps) => {
       {!isCollapsed && (
         <div className="p-4 border-t border-white/10">
           <p className="text-xs text-white/50 text-center">
-            © 2026 RentShield
+            © 2026 AppealShield
           </p>
         </div>
       )}

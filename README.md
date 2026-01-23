@@ -1,12 +1,12 @@
-# RentShield
+# AppealShield
 
-AI-powered tenant rights platform that helps renters analyze leases, understand their rights, and communicate with landlords.
+AI-powered gig worker protection platform that helps drivers and delivery workers fight unfair account deactivations across Uber, DoorDash, Instacart, and more.
 
 ## Features
 
-- **Lease Analyzer** — Upload a lease PDF and get a clause-by-clause breakdown with risk flags and plain-English explanations
-- **Rights Chatbot** — Ask questions about tenant rights and get state-specific answers powered by RAG
-- **Letter Generator** — Create professional dispute letters to send to your landlord
+- **Deactivation Analyzer** — Upload your deactivation notice and get analysis of the reason, platform ToS violations claimed, and your appeal options
+- **Appeal Assistant** — Answer questions about your situation and get personalized appeal strategies powered by platform ToS + labor law RAG
+- **Letter Generator** — Generate professional, evidence-based appeal letters tailored to your platform and deactivation reason
 
 ## Tech Stack
 
@@ -65,7 +65,7 @@ PINECONE_API_KEY=your_key_here
 ## Project Structure
 
 ```
-rentshield/
+appealshield/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py
