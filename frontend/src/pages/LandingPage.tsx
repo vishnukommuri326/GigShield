@@ -92,7 +92,7 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
               Learn More
             </button>
             <button
-              onClick={() => onNavigate('analyzer')}
+              onClick={() => onNavigate('wizard')}
               className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
               Start Appeal
@@ -119,7 +119,7 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
 
         <div className="flex items-center justify-center gap-4 mb-12">
           <button
-            onClick={() => onNavigate('analyzer')}
+            onClick={() => onNavigate('wizard')}
             className="bg-amber-500 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-amber-600 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
           >
             Start Your Appeal
