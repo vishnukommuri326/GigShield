@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import LandingPage from './pages/LandingPage';
+import AppealWizard from './pages/AppealWizard';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -12,14 +13,16 @@ function App() {
         return <LandingPage onNavigate={setCurrentPage} />;
       case 'dashboard':
         return <Dashboard onNavigate={setCurrentPage} />;
+      case 'analyzer':
+        return <AppealWizard onNavigate={setCurrentPage} />;
       default:
         return <LandingPage onNavigate={setCurrentPage} />;
     }
   };
 
-  // Show landing page without sidebar
-  if (currentPage === 'landing') {
-    return <LandingPage onNavigate={setCurrentPage} />;
+  // Show landing page and wizard without sidebar
+  if (currentPage === 'landing' || currentPage === 'analyzer') {
+    return renderPage();
   }
 
   // Show authenticated pages with sidebar
