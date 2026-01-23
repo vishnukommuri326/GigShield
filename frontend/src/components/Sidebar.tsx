@@ -1,38 +1,44 @@
 import { useState } from 'react';
 import { 
   LayoutDashboard, 
-  FileText, 
   MessageSquare, 
   FileEdit, 
-  Camera, 
-  BookOpen,
-  Menu,
-  X,
-  Shield
+  Shield,
+  Search,
+  FolderOpen,
+  CheckCircle,
+  BookMarked,
+  User,
+  Home,
+  X
 } from 'lucide-react';
 
 interface SidebarProps {
   currentPage: string;
   onNavigate: (page: string) => void;
+  onClose?: () => void;
 }
 
-const Sidebar = ({ currentPage, onNavigate }: SidebarProps) => {
+const Sidebar = ({ currentPage, onNavigate, onClose }: SidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const navItems = [
+    { id: 'landing', icon: Home, label: 'Home' },
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { id: 'analyzer', icon: FileText, label: 'Deactivation Analyzer' },
-    { id: 'chat', icon: MessageSquare, label: 'Appeal Assistant' },
-    { id: 'letters', icon: FileEdit, label: 'Letter Generator' },
-    { id: 'evidence', icon: Camera, label: 'Evidence Tracker' },
-    { id: 'resources', icon: BookOpen, label: 'Resources' },
+    { id: 'wizard', icon: FileEdit, label: 'Appeal Wizard' },
+    { id: 'analyzer', icon: Search, label: 'Notice Analyzer' },
+    { id: 'tracker', icon: CheckCircle, label: 'Appeal Tracker' },
+    { id: 'evidence', icon: FolderOpen, label: 'Evidence Organizer' },
+    { id: 'chat', icon: MessageSquare, label: 'Rights Chatbot' },
+    { id: 'knowledge', icon: BookMarked, label: 'Know Your Rights' },
+    { id: 'account', icon: User, label: 'Account' },
   ];
 
   return (
     <div 
-      className={`bg-[#1e3a5f] text-white h-screen fixed left-0 top-0 transition-all duration-300 ${
+      className={`bg-[#1e3a5f] text-white h-screen transition-all duration-300 ${
         isCollapsed ? 'w-20' : 'w-64'
-      } flex flex-col shadow-xl z-50`}
+      } flex flex-col shadow-xl`}
     >
       {/* Header */}
       <div className="p-6 flex items-center justify-between border-b border-white/10">
@@ -43,10 +49,16 @@ const Sidebar = ({ currentPage, onNavigate }: SidebarProps) => {
           </div>
         )}
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() => {
+            if (onClose) {
+              onClose();
+            } else {
+              setIsCollapsed(!isCollapsed);
+            }
+          }}
           className="p-2 hover:bg-white/10 rounded-lg transition-colors"
         >
-          {isCollapsed ? <Menu className="w-5 h-5" /> : <X className="w-5 h-5" />}
+          <X className="w-5 h-5" />
         </button>
       </div>
 
