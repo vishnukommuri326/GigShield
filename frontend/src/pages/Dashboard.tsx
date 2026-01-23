@@ -8,24 +8,24 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
   const quickActions = [
     {
       id: 'analyzer',
-      title: 'Analyze Your Lease',
-      description: 'Upload your lease agreement to identify risky clauses and get legal insights',
+      title: 'Analyze Deactivation',
+      description: 'Upload your deactivation notice and understand why your account was flagged',
       icon: FileText,
       color: 'bg-gradient-to-br from-[#0d9488] to-[#0f766e]',
       action: () => onNavigate('analyzer'),
     },
     {
       id: 'chat',
-      title: 'Ask About Your Rights',
-      description: 'Get instant answers about tenant laws specific to your state',
+      title: 'Get Appeal Strategy',
+      description: 'Answer questions about your case and get personalized appeal guidance',
       icon: MessageSquare,
       color: 'bg-gradient-to-br from-[#1e3a5f] to-[#1e40af]',
       action: () => onNavigate('chat'),
     },
     {
       id: 'letters',
-      title: 'Generate a Letter',
-      description: 'Create professional dispute or request letters to your landlord',
+      title: 'Generate Appeal Letter',
+      description: 'Create a professional, evidence-based appeal letter for your platform',
       icon: FileEdit,
       color: 'bg-gradient-to-br from-[#6366f1] to-[#4f46e5]',
       action: () => onNavigate('letters'),
@@ -33,14 +33,14 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
   ];
 
   const stats = [
-    { label: 'Leases Analyzed', value: '2,847', icon: TrendingUp, trend: '+12%' },
-    { label: 'Issues Identified', value: '8,234', icon: AlertCircle, trend: '+8%' },
-    { label: 'Disputes Resolved', value: '1,923', icon: CheckCircle, trend: '+15%' },
+    { label: 'Cases Analyzed', value: '2,847', icon: TrendingUp, trend: '+12%' },
+    { label: 'Appeals Filed', value: '4,234', icon: AlertCircle, trend: '+18%' },
+    { label: 'Workers Reinstated', value: '1,923', icon: CheckCircle, trend: '+15%' },
   ];
 
   const tipOfTheDay = {
     title: "Did You Know?",
-    content: "In most states, landlords must return your security deposit within 14-30 days after you move out. Any deductions must be itemized in writing with receipts."
+    content: "Seattle's January 2025 law requires gig platforms to provide clear deactivation reasons and human review of appeals. More cities are following this model — know your rights!"
   };
 
   return (
@@ -49,10 +49,10 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
-            Welcome to RentShield
+            Welcome to AppealShield
           </h1>
           <p className="text-slate-600 text-lg">
-            Your AI-powered tenant rights assistant. Let's protect your rights together.
+            Your AI-powered deactivation appeal assistant. Let's fight for your livelihood together.
           </p>
         </div>
 
