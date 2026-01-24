@@ -74,7 +74,7 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
             <div className="bg-blue-600 rounded-lg p-2">
               <Shield className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-slate-900">AppealShield</span>
+            <span className="text-2xl font-bold text-slate-900">GigShield</span>
           </div>
           <nav className="hidden md:flex items-center gap-8">
             <button 
@@ -119,7 +119,7 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
 
         <p className="text-xl text-slate-600 max-w-3xl mx-auto mb-10 leading-relaxed">
           Gig platforms deactivate workers with vague explanations and opaque processes. 
-          AppealShield helps you understand your rights and craft winning appeals — for free.
+          GigShield helps you understand your rights and craft winning appeals — for free.
         </p>
 
         <div className="flex items-center justify-center gap-4 mb-12">
@@ -175,7 +175,7 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
       {/* How It Works Section */}
       <section id="how-it-works" className="max-w-7xl mx-auto px-6 py-20">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-slate-900 mb-4">How AppealShield Works</h2>
+          <h2 className="text-4xl font-bold text-slate-900 mb-4">How GigShield Works</h2>
           <p className="text-xl text-slate-600">
             From deactivation notice to submitted appeal in minutes — not days.
           </p>
@@ -218,9 +218,9 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Shield className="w-6 h-6 text-blue-400" />
-              <span className="text-xl font-bold">AppealShield</span>
+              <span className="text-xl font-bold">GigShield</span>
             </div>
-            <p className="text-slate-400 text-sm">© 2026 AppealShield. Fighting for gig workers.</p>
+            <p className="text-slate-400 text-sm">© 2026 GigShield. Fighting for gig workers.</p>
           </div>
         </div>
       </footer>

@@ -1,4 +1,4 @@
-# AppealShield
+# GigShield
 
 AI-powered gig worker protection platform that helps drivers and delivery workers fight unfair account deactivations across Uber, DoorDash, Instacart, and more.
 
