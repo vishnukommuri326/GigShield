@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -12,30 +12,49 @@ import EvidenceOrganizer from './pages/EvidenceOrganizer';
 import RightsChatbot from './pages/RightsChatbot';
 import KnowledgeBase from './pages/KnowledgeBase';
 import Account from './pages/Account';
+import { useAuth } from './hooks/useAuths';
+import { logout as firebaseLogout } from './services/authService';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('landing');
+  const [currentPage, setCurrentPage] = useState('login');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
-  const [userName, setUserName] = useState('');
+  const { user, loading } = useAuth();
+
+  // Always logout when app mounts (fresh page load or browser open)
+  useEffect(() => {
+    const handlePageLoad = async () => {
+      await firebaseLogout();
+    };
+    handlePageLoad();
+    
+    // Cleanup: logout when page closes/unmounts
+    return () => {
+      firebaseLogout();
+    };
+  }, []);
+
+  // Redirect logic: logged in users go to landing (home), logged out users go to login
+  useEffect(() => {
+    if (user && ['login', 'signup'].includes(currentPage)) {
+      setCurrentPage('landing');
+    } else if (!user && !loading && !['login', 'signup'].includes(currentPage)) {
+      setCurrentPage('login');
+    }
+  }, [user, loading]);
 
   const handleLogin = (email: string) => {
-    setIsAuthenticated(true);
-    setUserEmail(email);
+    // Firebase auth is already handled, just navigate
+    setCurrentPage('landing');
   };
 
   const handleSignup = (email: string, name: string) => {
-    setIsAuthenticated(true);
-    setUserEmail(email);
-    setUserName(name);
+    // Firebase auth is already handled, just navigate
+    setCurrentPage('landing');
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setUserEmail('');
-    setUserName('');
-    setCurrentPage('landing');
+  const handleLogout = async () => {
+    await firebaseLogout();
+    setCurrentPage('login');
   };
 
   const renderPage = () => {
@@ -78,7 +97,19 @@ function App() {
   };
 
   const isAuthPage = ['login', 'signup'].includes(currentPage);
-  const showSidebar = !isAuthPage;
+  const showSidebar = !isAuthPage && !!user;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0d9488] mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50 relative">
@@ -108,6 +139,7 @@ function App() {
             currentPage={currentPage}
             onNavigate={handleNavigate}
             onClose={() => setIsSidebarOpen(false)}
+            onLogout={handleLogout}
           />
         </div>
       )}

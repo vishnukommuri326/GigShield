@@ -1,5 +1,9 @@
+// frontend/src/pages/Signup.tsx (or wherever your Signup.tsx is)
+// REPLACE YOUR EXISTING FILE WITH THIS
+
 import { useState } from 'react';
 import { Mail, Lock, User, Shield, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { signUp } from '../services/authService';  // NEW IMPORT
 
 interface SignupProps {
   onNavigate: (page: string) => void;
@@ -53,12 +57,23 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
 
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      onSignup(email, name);
+    // CHANGED: Now uses real Firebase auth
+    try {
+      const user = await signUp({ email, password, name });
+      onSignup(user.email!, name);
       onNavigate('dashboard');
-    }, 1500);
+    } catch (err: any) {
+      // Handle specific Firebase errors
+      if (err.message.includes('email-already-in-use')) {
+        setError('This email is already registered. Try logging in instead.');
+      } else if (err.message.includes('weak-password')) {
+        setError('Password is too weak. Please use a stronger password.');
+      } else {
+        setError(err.message || 'Failed to create account. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const strength = passwordStrength();
