@@ -1,5 +1,8 @@
+// frontend/src/pages/Login.tsx 
+
 import { useState } from 'react';
 import { Mail, Lock, Shield, ArrowRight, AlertCircle } from 'lucide-react';
+import { login } from '../services/authService'; 
 
 interface LoginProps {
   onNavigate: (page: string) => void;
@@ -28,22 +31,23 @@ const Login = ({ onNavigate, onLogin }: LoginProps) => {
 
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    // CHANGED: Now uses real Firebase auth
+    try {
+      const user = await login({ email, password });
+      onLogin(user.email!);
+      onNavigate('landing');
+    } catch (err: any) {
+      setError(err.message || 'Failed to login. Please check your credentials.');
+    } finally {
       setLoading(false);
-      // For demo purposes, accept any email/password
-      onLogin(email);
-      onNavigate('dashboard');
-    }, 1000);
+    }
   };
 
   const handleDemoLogin = () => {
+    // For demo, auto-fill credentials
     setEmail('demo@gigshield.com');
     setPassword('demo123');
-    setTimeout(() => {
-      onLogin('demo@gigshield.com');
-      onNavigate('dashboard');
-    }, 500);
+    // Note: You'll need to create this demo account in Firebase first
   };
 
   return (

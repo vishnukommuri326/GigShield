@@ -14,11 +14,13 @@ AI-powered gig worker protection platform that helps drivers and delivery worker
 - React + TypeScript
 - Vite
 - Tailwind CSS
+- Firebase Authentication
+- Firebase Firestore
 
 **Backend**
 - Python + FastAPI
-- OpenAI GPT-4
-- Pinecone (vector database)
+- Firebase Admin SDK
+- Claude AI (Anthropic)
 - PyMuPDF (PDF parsing)
 
 ## Getting Started
@@ -27,8 +29,8 @@ AI-powered gig worker protection platform that helps drivers and delivery worker
 
 - Node.js 18+
 - Python 3.10+
-- OpenAI API key
-- Pinecone API key
+- Firebase project (with Authentication & Firestore enabled)
+- Anthropic API key (for Claude AI)
 
 ### Frontend Setup
 
@@ -39,6 +41,12 @@ npm run dev
 ```
 
 Runs on `http://localhost:5173`
+
+**Firebase Configuration:**
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Enable Authentication (Email/Password)
+3. Enable Firestore Database
+4. Copy your Firebase config to `frontend/src/config/firebase.ts`
 
 ### Backend Setup
 
@@ -58,9 +66,14 @@ Runs on `http://localhost:8000`
 Create `backend/.env`:
 
 ```
-OPENAI_API_KEY=your_key_here
-PINECONE_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_claude_api_key_here
+FIREBASE_CREDENTIALS_PATH=path/to/serviceAccountKey.json
 ```
+
+**Firebase Admin Setup:**
+1. Go to Firebase Console → Project Settings → Service Accounts
+2. Click "Generate New Private Key"
+3. Save the JSON file and reference its path in `.env`
 
 ## Project Structure
 

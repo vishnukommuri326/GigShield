@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Upload, AlertCircle, CheckCircle, XCircle, AlertTriangle, Info, TrendingUp, ArrowRight, Sparkles, FileText, Shield, Clock } from 'lucide-react';
+import { analyzeNotice as analyzeNoticeAPI } from '../services/apiService';
 
 interface NoticeAnalyzerProps {
   onNavigate: (page: string) => void;
@@ -22,34 +23,52 @@ const NoticeAnalyzer = ({ onNavigate }: NoticeAnalyzerProps) => {
   const [noticeText, setNoticeText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string>('');
 
-  // Mock analysis function (will be replaced with actual AI)
-  const analyzeNotice = () => {
+  // Real API call to backend
+  const analyzeNotice = async () => {
+    if (!noticeText.trim()) {
+      setError('Please enter your notice text');
+      return;
+    }
+
     setIsAnalyzing(true);
+    setError('');
     
-    // Simulate API call
-    setTimeout(() => {
-      const mockResult: AnalysisResult = {
-        platform: detectPlatform(noticeText),
-        reason: 'Violation of community guidelines',
-        category: 'Customer Complaint',
-        deactivationDate: '2026-01-23',
-        appealDeadline: '2026-02-22',
-        daysRemaining: 30,
-        missingInfo: [
-          'Specific policy or guideline violated',
-          'Date and time of alleged incident',
-          'Evidence or documentation supporting the deactivation',
-          'Details of customer complaint or report',
-        ],
-        riskLevel: 'moderate',
-        successRate: 68,
+    try {
+      // Call real backend API
+      const result = await analyzeNoticeAPI(noticeText);
+      
+      // Map API response to our component state
+      const mappedResult: AnalysisResult = {
+        platform: result.platform,
+        reason: result.reason,
+        category: result.urgency_level, // Using urgency as category for now
+        deactivationDate: new Date().toISOString().split('T')[0],
+        appealDeadline: result.deadline_days 
+          ? new Date(Date.now() + result.deadline_days * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          : '',
+        daysRemaining: result.deadline_days || 30,
+        missingInfo: result.missing_info,
+        riskLevel: mapRiskLevel(result.risk_level),
+        successRate: 68, // Mock for now
         extracted: true,
       };
       
-      setAnalysisResult(mockResult);
+      setAnalysisResult(mappedResult);
+    } catch (err: any) {
+      console.error('Analysis error:', err);
+      setError(err.message || 'Failed to analyze notice. Please try again.');
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
+  };
+
+  const mapRiskLevel = (level: string): 'easy' | 'moderate' | 'difficult' => {
+    const lower = level.toLowerCase();
+    if (lower.includes('low') || lower.includes('easy')) return 'easy';
+    if (lower.includes('high') || lower.includes('difficult')) return 'difficult';
+    return 'moderate';
   };
 
   const detectPlatform = (text: string): string => {
@@ -126,6 +145,17 @@ const NoticeAnalyzer = ({ onNavigate }: NoticeAnalyzerProps) => {
               placeholder="Paste your deactivation notice here..."
             />
           </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-red-800">Error</p>
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            </div>
+          )}
 
           <button 
             onClick={analyzeNotice}

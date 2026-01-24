@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ArrowLeft, Check, Upload, Sparkles } from 'lucide-react';
+import { ArrowLeft, Check, Upload, Sparkles, AlertCircle } from 'lucide-react';
+import { generateAppeal } from '../services/apiService';
 
 interface AppealWizardProps {
   onNavigate: (page: string) => void;
@@ -15,6 +16,10 @@ interface Platform {
 
 const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedLetter, setGeneratedLetter] = useState('');
+  const [appealId, setAppealId] = useState('');
+  const [error, setError] = useState('');
   
   // Step 1: Platform Selection
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
@@ -65,7 +70,7 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
 
   // Copy letter to clipboard
   const copyToClipboard = () => {
-    const letterText = generateLetterText();
+    const letterText = generatedLetter || generateLetterText();
     navigator.clipboard.writeText(letterText).then(() => {
       alert('Appeal letter copied to clipboard!');
     });
@@ -127,9 +132,46 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
     return letter;
   };
 
-  const handleContinue = () => {
-    if (currentStep < 4) {
+  const handleContinue = async () => {
+    if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
+    } else if (currentStep === 3) {
+      // Generate appeal by calling backend API
+      await handleGenerateAppeal();
+    }
+  };
+
+  const handleGenerateAppeal = async () => {
+    setIsGenerating(true);
+    setError('');
+
+    try {
+      // Call backend API to generate appeal
+      const result = await generateAppeal({
+        platform: selectedPlatform,
+        deactivation_reason: deactivationNotice,
+        user_story: userStory,
+        account_tenure: accountTenure,
+        current_rating: currentRating,
+        completion_rate: completionRate,
+        total_deliveries: totalDeliveries,
+        appeal_tone: appealTone,
+        user_state: userState
+      });
+
+      // Save the generated letter and appeal ID
+      setGeneratedLetter(result.appeal_letter);
+      setAppealId(result.appeal_id);
+      
+      // Move to step 4 to show the generated letter
+      setCurrentStep(4);
+      
+      console.log('✓ Appeal generated and saved:', result.appeal_id);
+    } catch (err: any) {
+      console.error('Error generating appeal:', err);
+      setError(err.message || 'Failed to generate appeal. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -152,6 +194,9 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
     setEvidence('');
     setUserState('');
     setAppealTone('professional');
+    setGeneratedLetter('');
+    setAppealId('');
+    setError('');
   };
 
   return (
@@ -509,19 +554,42 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
               </div>
             </div>
 
+            {/* Error Display */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-800">Error</p>
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              </div>
+            )}
+
             {/* Buttons */}
             <div className="flex gap-4 justify-center">
               <button
                 onClick={() => setCurrentStep(2)}
-                className="px-8 py-4 rounded-xl font-semibold text-lg border-2 border-slate-300 text-slate-700 hover:bg-slate-50 transition-all"
+                disabled={isGenerating}
+                className="px-8 py-4 rounded-xl font-semibold text-lg border-2 border-slate-300 text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Back
               </button>
               <button
                 onClick={handleContinue}
-                className="bg-blue-600 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:bg-blue-700 shadow-lg transition-all"
+                disabled={isGenerating}
+                className="bg-blue-600 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:bg-blue-700 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Generate Appeal Letter
+                {isGenerating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5" />
+                    Generate Appeal Letter
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -529,6 +597,15 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
 
         {currentStep === 4 && (
           <div className="max-w-4xl mx-auto">
+            {/* Success Message */}
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
+              <Check className="w-6 h-6 text-green-600 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-green-800">Appeal Generated Successfully!</p>
+                <p className="text-sm text-green-700">Your appeal has been saved. Appeal ID: {appealId}</p>
+              </div>
+            </div>
+
             {/* Action Buttons */}
             <div className="flex gap-4 justify-end mb-6">
               <button 
@@ -558,7 +635,14 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                 </div>
               </div>
 
-              <div className="space-y-6 text-slate-800 leading-relaxed">
+              {generatedLetter ? (
+                /* Show backend-generated letter */
+                <div className="space-y-4 text-slate-800 leading-relaxed whitespace-pre-wrap">
+                  {generatedLetter}
+                </div>
+              ) : (
+                /* Fallback to template */
+                <div className="space-y-6 text-slate-800 leading-relaxed">
                 <div className="text-right text-slate-600">{getCurrentDate()}</div>
 
                 <div>
@@ -683,6 +767,7 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                   </div>
                 </div>
               </div>
+              )}
             </div>
 
             {/* Next Steps */}

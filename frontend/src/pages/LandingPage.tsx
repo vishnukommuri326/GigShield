@@ -1,10 +1,42 @@
-import { ArrowRight, Clock, FileText, Shield, Users, TrendingUp, AlertTriangle, Upload, Search, Pencil, Send } from 'lucide-react';
+import { ArrowRight, Clock, FileText, Shield, Users, TrendingUp, AlertTriangle, Upload, Search, Pencil, Send, LogOut, Activity, CheckCircle, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { useAuth } from '../hooks/useAuths';
+import { logout } from '../services/authService';
+import { checkHealth } from '../services/apiService';
 
 interface LandingPageProps {
   onNavigate: (page: string) => void;
 }
 
 const LandingPage = ({ onNavigate }: LandingPageProps) => {
+  const { user } = useAuth();
+  const [testResult, setTestResult] = useState<any>(null);
+  const [testLoading, setTestLoading] = useState(false);
+  const [testError, setTestError] = useState('');
+  const [showTestPanel, setShowTestPanel] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+    onNavigate('login');
+  };
+
+  const testBackendConnection = async () => {
+    setTestLoading(true);
+    setTestError('');
+    setTestResult(null);
+
+    try {
+      const health = await checkHealth();
+      setTestResult(health);
+      console.log('✅ Backend health check:', health);
+    } catch (err: any) {
+      setTestError(err.message);
+      console.error('❌ Backend test failed:', err);
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
   const stats = [
     {
       icon: Users,
@@ -93,21 +125,130 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
             </a>
           </nav>
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => onNavigate('login')}
-              className="text-slate-600 hover:text-slate-900 transition-colors font-medium"
-            >
-              Log In
-            </button>
-            <button
-              onClick={() => onNavigate('signup')}
-              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-            >
-              Sign Up Free
-            </button>
+            {user ? (
+              <>
+                <button
+                  onClick={() => setShowTestPanel(!showTestPanel)}
+                  className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors font-medium"
+                >
+                  <Activity className="w-4 h-4" />
+                  Test Backend
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 bg-red-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={() => onNavigate('login')}
+                  className="text-slate-600 hover:text-slate-900 transition-colors font-medium"
+                >
+                  Log In
+                </button>
+                <button
+                  onClick={() => onNavigate('signup')}
+                  className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Sign Up Free
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
+
+      {/* Backend Test Panel - Only show if user is logged in */}
+      {user && showTestPanel && (
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="bg-white border-2 border-blue-200 rounded-xl p-6 shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Activity className="w-6 h-6 text-blue-600" />
+                <h3 className="text-xl font-bold text-slate-900">Backend Connection Test</h3>
+              </div>
+              <button
+                onClick={() => setShowTestPanel(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-slate-600 mb-4">
+              Test the connection between your frontend and the FastAPI backend.
+            </p>
+
+            <button
+              onClick={testBackendConnection}
+              disabled={testLoading}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {testLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Testing...
+                </>
+              ) : (
+                <>
+                  <Activity className="w-5 h-5" />
+                  Test Connection
+                </>
+              )}
+            </button>
+
+            {/* Success Result */}
+            {testResult && !testError && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-green-900 mb-2">✅ Backend Connection Working!</h4>
+                    <div className="text-sm text-green-800 space-y-1">
+                      <p><strong>Status:</strong> {testResult.status}</p>
+                      <p><strong>Firebase:</strong> {testResult.firebase_configured ? '✅ Configured' : '❌ Not configured'}</p>
+                      <p><strong>Anthropic API:</strong> {testResult.anthropic_configured ? '✅ Configured' : '❌ Not configured'}</p>
+                    </div>
+                    <pre className="mt-3 p-3 bg-green-100 rounded text-xs overflow-x-auto">
+                      {JSON.stringify(testResult, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error Result */}
+            {testError && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <XCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-red-900 mb-2">❌ Connection Failed</h4>
+                    <p className="text-sm text-red-800">{testError}</p>
+                    <div className="mt-3 p-3 bg-red-100 rounded text-sm text-red-900">
+                      <p className="font-semibold mb-1">Troubleshooting:</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li>Make sure backend is running: <code className="bg-red-200 px-1 rounded">python -m app.main</code></li>
+                        <li>Check backend is at: <code className="bg-red-200 px-1 rounded">http://localhost:8000</code></li>
+                        <li>Look for CORS errors in browser console (F12)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 p-3 bg-slate-50 rounded-lg text-sm text-slate-600">
+              <p><strong>Logged in as:</strong> {user.email}</p>
+              <p><strong>User ID:</strong> {user.uid}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-6 py-20 text-center">
