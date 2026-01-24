@@ -15,7 +15,7 @@ import Account from './pages/Account';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
@@ -51,14 +51,19 @@ function App() {
       case 'wizard':
         return <AppealWizard onNavigate={setCurrentPage} />;
       case 'analyzer':
+      case 'notice-analyzer':
         return <NoticeAnalyzer onNavigate={setCurrentPage} />;
       case 'tracker':
+      case 'appeal-tracker':
         return <AppealTracker onNavigate={setCurrentPage} />;
       case 'evidence':
+      case 'evidence-organizer':
         return <EvidenceOrganizer onNavigate={setCurrentPage} />;
       case 'chat':
+      case 'chatbot':
         return <RightsChatbot onNavigate={setCurrentPage} />;
       case 'knowledge':
+      case 'knowledge-base':
         return <KnowledgeBase onNavigate={setCurrentPage} />;
       case 'account':
         return <Account onNavigate={setCurrentPage} />;
@@ -73,7 +78,7 @@ function App() {
   };
 
   const isAuthPage = ['login', 'signup'].includes(currentPage);
-  const showSidebar = !isAuthPage && !['landing'].includes(currentPage);
+  const showSidebar = !isAuthPage;
 
   return (
     <div className="flex min-h-screen bg-slate-50 relative">
