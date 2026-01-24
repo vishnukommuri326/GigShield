@@ -6,12 +6,12 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDt5KJbF2q17R1qlK0C-YMUly0Ves0n3KY",
-  authDomain: "gigshield-22319.firebaseapp.com",
-  projectId: "gigshield-22319",
-  storageBucket: "gigshield-22319.firebasestorage.app",
-  messagingSenderId: "246609720480",
-  appId: "1:246609720480:web:09a5540f2dc162fc41c5c5"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
