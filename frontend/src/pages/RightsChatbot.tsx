@@ -17,7 +17,7 @@ const RightsChatbot = ({ onNavigate }: RightsChatbotProps) => {
     {
       id: 1,
       type: 'bot',
-      text: "👋 Hi! I'm your AppealShield Rights Assistant. I can help you understand your rights as a gig worker, answer questions about deactivations, and guide you through the appeal process. What would you like to know?",
+      text: "👋 Hi! I'm your GigShield Rights Assistant. I can help you understand your rights as a gig worker, answer questions about deactivations, and guide you through the appeal process. What would you like to know?",
       timestamp: new Date().toLocaleTimeString(),
     },
   ]);

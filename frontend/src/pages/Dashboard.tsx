@@ -49,7 +49,7 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
-            Welcome to AppealShield
+            Welcome to GigShield
           </h1>
           <p className="text-slate-600 text-lg">
             Your AI-powered deactivation appeal assistant. Let's fight for your livelihood together.

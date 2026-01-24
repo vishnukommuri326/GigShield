@@ -45,7 +45,7 @@ const Sidebar = ({ currentPage, onNavigate, onClose }: SidebarProps) => {
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <Shield className="w-8 h-8 text-[#0d9488]" />
-            <span className="text-xl font-bold">AppealShield</span>
+            <span className="text-xl font-bold">GigShield</span>
           </div>
         )}
         <button
@@ -89,7 +89,7 @@ const Sidebar = ({ currentPage, onNavigate, onClose }: SidebarProps) => {
       {!isCollapsed && (
         <div className="p-4 border-t border-white/10">
           <p className="text-xs text-white/50 text-center">
-            © 2026 AppealShield
+            © 2026 GigShield
           </p>
         </div>
       )}

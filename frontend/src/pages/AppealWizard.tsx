@@ -15,9 +15,22 @@ interface Platform {
 
 const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
   const [currentStep, setCurrentStep] = useState(1);
+  
+  // Step 1: Platform Selection
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
+  
+  // Step 2: Deactivation Notice
   const [deactivationNotice, setDeactivationNotice] = useState('');
-  const [additionalDetails, setAdditionalDetails] = useState('');
+  
+  // Step 3: Account Details
+  const [accountTenure, setAccountTenure] = useState('');
+  const [currentRating, setCurrentRating] = useState('');
+  const [completionRate, setCompletionRate] = useState('');
+  const [totalDeliveries, setTotalDeliveries] = useState('');
+  const [userStory, setUserStory] = useState('');
+  const [evidence, setEvidence] = useState('');
+  const [userState, setUserState] = useState('');
+  const [appealTone, setAppealTone] = useState('professional');
 
   const steps = [
     { number: 1, label: 'Platform' },
@@ -35,6 +48,85 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
     { id: 'shipt', name: 'Shipt', color: 'bg-[#00B88D]', bgGradient: 'from-teal-500 to-teal-600', icon: '🛍️' },
   ];
 
+  // Get platform name for display
+  const getPlatformName = () => {
+    const platform = platforms.find(p => p.id === selectedPlatform);
+    return platform ? platform.name : 'the platform';
+  };
+
+  // Get current date formatted
+  const getCurrentDate = () => {
+    return new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  // Copy letter to clipboard
+  const copyToClipboard = () => {
+    const letterText = generateLetterText();
+    navigator.clipboard.writeText(letterText).then(() => {
+      alert('Appeal letter copied to clipboard!');
+    });
+  };
+
+  // Generate plain text version of letter
+  const generateLetterText = () => {
+    let letter = `${getCurrentDate()}\n\n`;
+    letter += `${getPlatformName()} Appeals Team\n`;
+    letter += `Re: Appeal of Account Deactivation\n\n`;
+    letter += `Dear ${getPlatformName()} Appeals Team,\n\n`;
+    letter += `I am writing to formally appeal the deactivation of my ${getPlatformName()} account, which I received notice of on ${getCurrentDate()}.`;
+    
+    if (accountTenure) {
+      letter += ` I have been an active ${selectedPlatform === 'uber' || selectedPlatform === 'lyft' ? 'driver' : 'worker'} for approximately ${accountTenure}`;
+    }
+    
+    if (currentRating || completionRate || totalDeliveries) {
+      letter += ' with a consistent track record of excellence:\n\n';
+      if (accountTenure) letter += `- Account Tenure: ${accountTenure}\n`;
+      if (currentRating) letter += `- Rating: ${currentRating}\n`;
+      if (completionRate) letter += `- Completion Rate: ${completionRate}\n`;
+      if (totalDeliveries) letter += `- Total ${selectedPlatform === 'uber' || selectedPlatform === 'lyft' ? 'Rides' : 'Deliveries'}: ${totalDeliveries}\n`;
+    }
+    
+    letter += `\n\nREGARDING THE DEACTIVATION\n\n`;
+    letter += `The deactivation notice ${deactivationNotice ? 'stated the following:\n\n"' + deactivationNotice.substring(0, 200) + '"\n\n' : 'provided limited information about the reason for this action.\n\n'}`;
+    
+    if (userStory) {
+      letter += `However, I believe this decision was made in error for the following reasons:\n\n${userStory}\n\n`;
+    }
+    
+    if (evidence) {
+      letter += `SUPPORTING EVIDENCE\n\nI have the following evidence to support my case:\n\n${evidence}\n\n`;
+    }
+    
+    letter += `MISSING INFORMATION\n\n`;
+    letter += `I respectfully request that ${getPlatformName()} provide me with the following information:\n\n`;
+    letter += `1. Specific policy or community guideline violated\n`;
+    letter += `2. Date, time, and details of the alleged incident(s)\n`;
+    letter += `3. Evidence or documentation supporting the deactivation decision\n`;
+    letter += `4. Opportunity to review and respond to any customer complaints or reports\n\n`;
+    
+    letter += `REQUEST FOR REINSTATEMENT\n\n`;
+    letter += `Based on the above, I respectfully request:\n\n`;
+    letter += `1. Immediate reinstatement of my account\n`;
+    letter += `2. A detailed explanation of the specific incident(s) that led to this decision\n`;
+    letter += `3. An opportunity to review and respond to any evidence against me\n`;
+    letter += `4. Confirmation that this deactivation will not appear on my permanent record if found to be in error\n\n`;
+    
+    letter += `I take my work with ${getPlatformName()} seriously and have always strived to provide excellent service. I am confident that a thorough review of my account history will demonstrate my commitment to the platform's standards and policies.\n\n`;
+    letter += `I kindly request a response within 7 business days. Thank you for your time and consideration.\n\n`;
+    letter += `Sincerely,\n\n`;
+    letter += `[Your Full Name]\n`;
+    letter += `[Your Phone Number]\n`;
+    letter += `[Your Email Address]\n`;
+    letter += `ACCOUNT ID: [Your Account ID]`;
+    
+    return letter;
+  };
+
   const handleContinue = () => {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
@@ -46,6 +138,20 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
     if (currentStep === 2) return deactivationNotice.trim() !== '';
     if (currentStep === 3) return true;
     return false;
+  };
+
+  const resetWizard = () => {
+    setCurrentStep(1);
+    setSelectedPlatform('');
+    setDeactivationNotice('');
+    setAccountTenure('');
+    setCurrentRating('');
+    setCompletionRate('');
+    setTotalDeliveries('');
+    setUserStory('');
+    setEvidence('');
+    setUserState('');
+    setAppealTone('professional');
   };
 
   return (
@@ -243,6 +349,8 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Account Tenure</label>
                   <input
                     type="text"
+                    value={accountTenure}
+                    onChange={(e) => setAccountTenure(e.target.value)}
                     placeholder="e.g., 2 years"
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -251,6 +359,8 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Current Rating</label>
                   <input
                     type="text"
+                    value={currentRating}
+                    onChange={(e) => setCurrentRating(e.target.value)}
                     placeholder="e.g., 4.95"
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -259,6 +369,8 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Completion Rate</label>
                   <input
                     type="text"
+                    value={completionRate}
+                    onChange={(e) => setCompletionRate(e.target.value)}
                     placeholder="e.g., 98%"
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -267,6 +379,8 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Total Deliveries/Rides</label>
                   <input
                     type="text"
+                    value={totalDeliveries}
+                    onChange={(e) => setTotalDeliveries(e.target.value)}
                     placeholder="e.g., 2,500"
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -280,6 +394,8 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-slate-700 mb-2">What happened in your own words?</label>
                 <textarea
+                  value={userStory}
+                  onChange={(e) => setUserStory(e.target.value)}
                   placeholder="Describe what you believe happened. If you don't know why you were deactivated, that's okay — we'll help you request that information."
                   className="w-full h-32 px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-slate-700 placeholder:text-slate-400"
                 />
@@ -287,6 +403,8 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Evidence you have (optional)</label>
                 <textarea
+                  value={evidence}
+                  onChange={(e) => setEvidence(e.target.value)}
                   placeholder="Describe any evidence: screenshots, dashcam footage, messages with customers, GPS records, etc."
                   className="w-full h-32 px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-slate-700 placeholder:text-slate-400"
                 />
@@ -298,34 +416,94 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
               <h2 className="text-2xl font-bold text-slate-900 mb-6">Appeal Preferences</h2>
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Your State</label>
-                <select className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
-                  <option>Select your state...</option>
-                  <option>California</option>
-                  <option>New York</option>
-                  <option>Washington</option>
-                  <option>Texas</option>
+                <select 
+                  value={userState}
+                  onChange={(e) => setUserState(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                >
+                  <option value="">Select your state...</option>
+                  <option value="California">California</option>
+                  <option value="New York">New York</option>
+                  <option value="Washington">Washington</option>
+                  <option value="Texas">Texas</option>
+                  <option value="Florida">Florida</option>
+                  <option value="Illinois">Illinois</option>
+                  <option value="New Jersey">New Jersey</option>
+                  <option value="Other">Other</option>
                 </select>
                 <p className="text-sm text-slate-500 mt-2">Some states have specific gig worker protections we'll reference</p>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-3">Appeal Tone</label>
                 <div className="grid grid-cols-3 gap-4">
-                  <button className="px-6 py-4 border-2 border-blue-600 bg-blue-50 rounded-xl text-left transition-all hover:shadow-md">
+                  <button 
+                    type="button"
+                    onClick={() => setAppealTone('professional')}
+                    className={`px-6 py-4 border-2 rounded-xl text-left transition-all hover:shadow-md ${
+                      appealTone === 'professional' 
+                        ? 'border-blue-600 bg-blue-50' 
+                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                    }`}
+                  >
                     <div className="flex items-center gap-2 mb-1">
-                      <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      <span className="font-semibold text-blue-900">Professional</span>
+                      {appealTone === 'professional' && (
+                        <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      <span className={`font-semibold ${appealTone === 'professional' ? 'text-blue-900' : 'text-slate-900'}`}>
+                        Professional
+                      </span>
                     </div>
-                    <p className="text-sm text-blue-700">Polite and factual</p>
+                    <p className={`text-sm ${appealTone === 'professional' ? 'text-blue-700' : 'text-slate-600'}`}>
+                      Polite and factual
+                    </p>
                   </button>
-                  <button className="px-6 py-4 border-2 border-slate-200 bg-slate-50 rounded-xl text-left transition-all hover:border-slate-300 hover:shadow-md">
-                    <div className="font-semibold text-slate-900 mb-1">Assertive</div>
-                    <p className="text-sm text-slate-600">Firm but respectful</p>
+                  <button 
+                    type="button"
+                    onClick={() => setAppealTone('assertive')}
+                    className={`px-6 py-4 border-2 rounded-xl text-left transition-all hover:shadow-md ${
+                      appealTone === 'assertive' 
+                        ? 'border-blue-600 bg-blue-50' 
+                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {appealTone === 'assertive' && (
+                        <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      <span className={`font-semibold ${appealTone === 'assertive' ? 'text-blue-900' : 'text-slate-900'}`}>
+                        Assertive
+                      </span>
+                    </div>
+                    <p className={`text-sm ${appealTone === 'assertive' ? 'text-blue-700' : 'text-slate-600'}`}>
+                      Firm but respectful
+                    </p>
                   </button>
-                  <button className="px-6 py-4 border-2 border-slate-200 bg-slate-50 rounded-xl text-left transition-all hover:border-slate-300 hover:shadow-md">
-                    <div className="font-semibold text-slate-900 mb-1">Legal</div>
-                    <p className="text-sm text-slate-600">References laws and rights</p>
+                  <button 
+                    type="button"
+                    onClick={() => setAppealTone('legal')}
+                    className={`px-6 py-4 border-2 rounded-xl text-left transition-all hover:shadow-md ${
+                      appealTone === 'legal' 
+                        ? 'border-blue-600 bg-blue-50' 
+                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {appealTone === 'legal' && (
+                        <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      <span className={`font-semibold ${appealTone === 'legal' ? 'text-blue-900' : 'text-slate-900'}`}>
+                        Legal
+                      </span>
+                    </div>
+                    <p className={`text-sm ${appealTone === 'legal' ? 'text-blue-700' : 'text-slate-600'}`}>
+                      References laws and rights
+                    </p>
                   </button>
                 </div>
               </div>
@@ -353,7 +531,10 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
           <div className="max-w-4xl mx-auto">
             {/* Action Buttons */}
             <div className="flex gap-4 justify-end mb-6">
-              <button className="flex items-center gap-2 px-5 py-2.5 border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition-colors font-medium text-slate-700">
+              <button 
+                onClick={copyToClipboard}
+                className="flex items-center gap-2 px-5 py-2.5 border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition-colors font-medium text-slate-700"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
@@ -365,60 +546,113 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                 </svg>
                 Download
               </button>
-              <button className="flex items-center gap-2 px-5 py-2.5 border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition-colors font-medium text-slate-700">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Email to Lyft
-              </button>
             </div>
 
             {/* Letter Preview */}
             <div className="bg-white rounded-2xl border-2 border-slate-200 p-12 mb-8 shadow-lg">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-bold text-slate-900">Appeal Letter Preview</h2>
-                <span className="text-sm text-slate-500">Generated in 13.2 (Shortened) seconds</span>
+                <div className="text-right">
+                  <div className="text-sm text-slate-500">Platform: <span className="font-semibold text-slate-700">{getPlatformName()}</span></div>
+                  <div className="text-sm text-slate-500">Tone: <span className="font-semibold text-slate-700 capitalize">{appealTone}</span></div>
+                </div>
               </div>
 
               <div className="space-y-6 text-slate-800 leading-relaxed">
-                <div className="text-right text-slate-600">January 23, 2026</div>
+                <div className="text-right text-slate-600">{getCurrentDate()}</div>
 
                 <div>
-                  <div className="font-semibold text-slate-900">Lyft Appeals Team</div>
+                  <div className="font-semibold text-slate-900">{getPlatformName()} Appeals Team</div>
                   <div className="text-red-600 font-medium">Re: Appeal of Account Deactivation</div>
                 </div>
 
-                <div>Dear <span className="text-blue-600">Lyft Appeals</span> Team,</div>
+                <div>Dear {getPlatformName()} Appeals Team,</div>
 
                 <p>
-                  I am writing to formally appeal the deactivation of my Lyft account, which I received notice of on <span className="font-semibold">2026-01-23</span>. I have been an active driver for approximately <span className="font-semibold">2 years</span> with a consistent track record of excellence:
+                  I am writing to formally appeal the deactivation of my {getPlatformName()} account, which I received notice of on {getCurrentDate()}. 
+                  {accountTenure && (
+                    <> I have been an active {selectedPlatform === 'uber' || selectedPlatform === 'lyft' ? 'driver' : 'worker'} for approximately <span className="font-semibold">{accountTenure}</span></>
+                  )}
+                  {(currentRating || completionRate || totalDeliveries) && ' with a consistent track record of excellence:'}
                 </p>
 
-                <ul className="list-disc pl-6 space-y-1">
-                  <li><span className="font-semibold">Account Tenure:</span> [user's input]</li>
-                  <li><span className="font-semibold">Completion Rate:</span> [completion ratio]</li>
-                  <li><span className="font-semibold">Total Rides:</span> [total]</li>
-                </ul>
+                {(accountTenure || currentRating || completionRate || totalDeliveries) && (
+                  <ul className="list-disc pl-6 space-y-1">
+                    {accountTenure && <li><span className="font-semibold">Account Tenure:</span> {accountTenure}</li>}
+                    {currentRating && <li><span className="font-semibold">Rating:</span> {currentRating}</li>}
+                    {completionRate && <li><span className="font-semibold">Completion Rate:</span> {completionRate}</li>}
+                    {totalDeliveries && <li><span className="font-semibold">Total {selectedPlatform === 'uber' || selectedPlatform === 'lyft' ? 'Rides' : 'Deliveries'}:</span> {totalDeliveries}</li>}
+                  </ul>
+                )}
 
                 <div>
                   <div className="font-bold text-blue-700 mb-2">REGARDING THE DEACTIVATION</div>
                   <p>
-                    The deactivation notice stated <span className="text-red-600">"Violation of community guidelines."</span> However, I believe this decision was made in error for the following reasons:
+                    The deactivation notice {deactivationNotice ? 'stated the following:' : 'provided limited information about the reason for this action.'}
                   </p>
-                  <p className="mt-2 italic text-blue-600">[Your explanation will appear here based on the details you provided]</p>
+                  {deactivationNotice && (
+                    <div className="mt-2 p-4 bg-slate-50 border-l-4 border-slate-300 italic text-slate-600">
+                      "{deactivationNotice.substring(0, 200)}{deactivationNotice.length > 200 ? '...' : ''}"
+                    </div>
+                  )}
+                  {userStory && (
+                    <>
+                      <p className="mt-3">However, I believe this decision was made in error for the following reasons:</p>
+                      <p className="mt-2 italic text-blue-800">{userStory}</p>
+                    </>
+                  )}
                 </div>
+
+                {evidence && (
+                  <div>
+                    <div className="font-bold text-blue-700 mb-2">SUPPORTING EVIDENCE</div>
+                    <p>I have the following evidence to support my case:</p>
+                    <p className="mt-2 italic text-blue-800">{evidence}</p>
+                  </div>
+                )}
 
                 <div>
                   <div className="font-bold text-blue-700 mb-2">MISSING INFORMATION</div>
                   <p>
-                    I respectfully request that Lyft provide me with the following information, which was not included in this deactivation notice but is necessary for me to adequately respond to these allegations:
+                    I respectfully request that {getPlatformName()} provide me with the following information, which was not included in the deactivation notice but is necessary for me to adequately respond to these allegations:
                   </p>
                   <ol className="list-decimal pl-6 space-y-1 mt-2">
-                    <li>Specific policy violated</li>
-                    <li>Date and time of alleged incident</li>
-                    <li>Evidence supporting the deactivation</li>
+                    <li>Specific policy or community guideline violated</li>
+                    <li>Date, time, and details of the alleged incident(s)</li>
+                    <li>Evidence or documentation supporting the deactivation decision</li>
+                    <li>Opportunity to review and respond to any customer complaints or reports</li>
                   </ol>
                 </div>
+
+                {userState && ['California', 'Washington', 'New York'].includes(userState) && (
+                  <div>
+                    <div className="font-bold text-blue-700 mb-2">APPLICABLE STATE PROTECTIONS</div>
+                    <p>
+                      As a gig worker in {userState}, I am entitled to certain protections under state law:
+                    </p>
+                    <ul className="list-disc pl-6 space-y-1 mt-2">
+                      {userState === 'California' && (
+                        <>
+                          <li>Right to notice and explanation for deactivation (AB5)</li>
+                          <li>Right to appeal deactivation decisions</li>
+                        </>
+                      )}
+                      {userState === 'Washington' && (
+                        <>
+                          <li>Right to written notice with specific reasons for deactivation</li>
+                          <li>Right to appeal with supporting evidence</li>
+                        </>
+                      )}
+                      {userState === 'New York' && (
+                        <>
+                          <li>Right to transparency in deactivation decisions</li>
+                          <li>Protection against arbitrary deactivation</li>
+                        </>
+                      )}
+                    </ul>
+                    <p className="mt-2">I respectfully request that this appeal be handled in accordance with these protections.</p>
+                  </div>
+                )}
 
                 <div>
                   <div className="font-bold text-blue-700 mb-2">REQUEST FOR REINSTATEMENT</div>
@@ -432,7 +666,7 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                 </div>
 
                 <p>
-                  I take my work with <span className="text-blue-600">Lyft</span> seriously and have always strived to provide excellent service. I am confident that a thorough review of my account history will demonstrate my commitment to the platform's standards and policies.
+                  I take my work with {getPlatformName()} seriously and have always strived to provide excellent service. I am confident that a thorough review of my account history will demonstrate my commitment to the platform's standards and policies.
                 </p>
 
                 <p>
@@ -442,10 +676,10 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                 <div className="mt-8">
                   <div>Sincerely,</div>
                   <div className="mt-2 space-y-1">
-                    <div>[Your Full Name]</div>
-                    <div>[Your Phone Number]</div>
-                    <div>[Your Email Address]</div>
-                    <div className="font-semibold">ACCOUNT ID: [Your Account ID]</div>
+                    <div className="text-slate-500">[Your Full Name]</div>
+                    <div className="text-slate-500">[Your Phone Number]</div>
+                    <div className="text-slate-500">[Your Email Address]</div>
+                    <div className="font-semibold text-slate-500">ACCOUNT ID: [Your Account ID]</div>
                   </div>
                 </div>
               </div>
@@ -457,19 +691,34 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">1</div>
-                  <p className="text-slate-700">Fill in the [bracketed] sections with your information</p>
+                  <p className="text-slate-700">Fill in the [bracketed] sections with your personal information</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">2</div>
-                  <p className="text-slate-700">Submit via Lyft's official appeal channel</p>
+                  <div className="text-slate-700">
+                    <p className="mb-1">Submit via {getPlatformName()}'s official appeal channel:</p>
+                    <div className="ml-4 text-sm text-blue-600 font-medium">
+                      {selectedPlatform === 'doordash' && '→ help.doordash.com/dashers → Account → Appeal Deactivation'}
+                      {selectedPlatform === 'uber' && '→ help.uber.com → Account → Deactivated Account'}
+                      {selectedPlatform === 'lyft' && '→ help.lyft.com/hc → Driver Account → Appeal'}
+                      {selectedPlatform === 'instacart' && '→ shoppers.instacart.com → Support → Account Status'}
+                      {selectedPlatform === 'amazonflex' && '→ flex.amazon.com → Support → Account Issue'}
+                      {selectedPlatform === 'shipt' && '→ shoppers.shipt.com → Support → Account Appeal'}
+                      {!selectedPlatform && '→ Check your platform\'s help center'}
+                    </div>
+                  </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">3</div>
-                  <p className="text-slate-700">Keep a copy of everything you submit</p>
+                  <p className="text-slate-700">Keep a copy of everything you submit (use the copy button above)</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">4</div>
-                  <p className="text-slate-700">Follow up if you don't hear back within 7 days</p>
+                  <p className="text-slate-700">Follow up if you don't hear back within 7 business days</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-amber-500 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">!</div>
+                  <p className="text-slate-700"><span className="font-semibold">Pro tip:</span> Some platforms respond faster via Twitter/X. Tag them publicly if your appeal is urgent.</p>
                 </div>
               </div>
             </div>
@@ -477,16 +726,22 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
             {/* Bottom Buttons */}
             <div className="flex gap-4 justify-center">
               <button
-                onClick={() => onNavigate('landing')}
+                onClick={resetWizard}
                 className="px-8 py-3 border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-slate-700"
               >
                 ← Start New Appeal
               </button>
               <button
-                onClick={() => setCurrentStep(4)}
+                onClick={() => setCurrentStep(3)}
                 className="px-8 py-3 border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-slate-700"
               >
-                🔄 Regenerate Letter
+                ← Edit Details
+              </button>
+              <button
+                onClick={() => onNavigate('tracker')}
+                className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+              >
+                Track This Appeal →
               </button>
             </div>
           </div>
