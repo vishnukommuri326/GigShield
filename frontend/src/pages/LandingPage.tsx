@@ -93,14 +93,17 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
             </a>
           </nav>
           <div className="flex items-center gap-4">
-            <button className="text-slate-600 hover:text-slate-900 transition-colors font-medium">
-              Learn More
+            <button 
+              onClick={() => onNavigate('login')}
+              className="text-slate-600 hover:text-slate-900 transition-colors font-medium"
+            >
+              Log In
             </button>
             <button
-              onClick={() => onNavigate('wizard')}
+              onClick={() => onNavigate('signup')}
               className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
-              Start Appeal
+              Sign Up Free
             </button>
           </div>
         </div>
