@@ -11,6 +11,7 @@ from app.models.schemas import (
 )
 from app.core.auth_middleware import get_current_user
 from app.core.firebase import save_appeal, get_user_appeals
+from app.services.ai_service import ai_service  # ← NOW IMPORTING!
 
 router = APIRouter(prefix="/api", tags=["appeals"])
 
@@ -22,10 +23,19 @@ router = APIRouter(prefix="/api", tags=["appeals"])
 async def health_check():
     """Health check endpoint"""
     import os
+    
+    # Check if Anthropic key exists AND is valid format
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+    anthropic_configured = (
+        anthropic_key is not None and
+        anthropic_key.startswith("sk-ant-") and
+        len(anthropic_key) > 20
+    )
+    
     return {
         "status": "healthy",
         "firebase_configured": bool(os.getenv("FIREBASE_PROJECT_ID")),
-        "anthropic_configured": bool(os.getenv("ANTHROPIC_API_KEY"))
+        "anthropic_configured": anthropic_configured
     }
 
 # ============================================
@@ -35,69 +45,68 @@ async def health_check():
 @router.post("/analyze-notice", response_model=NoticeAnalyzeResponse)
 async def analyze_notice(
     request: NoticeAnalyzeRequest,
-    current_user: dict = Depends(get_current_user)  # ← Requires auth!
+    current_user: dict = Depends(get_current_user)
 ):
     """
-    Analyze deactivation notice using AI.
+    Analyze deactivation notice using Claude AI.
     Requires authentication.
     """
     try:
-        # TODO: Import and use AI service when ready
-        # from app.services.ai_service import ai_service
-        # result = await ai_service.analyze_notice(request.notice_text)
+        print(f"✓ Analyzing notice for user: {current_user['email']}")
         
-        # Mock response for now
-        print(f"✓ Notice analyzed for user: {current_user['email']}")
+        # Use AI service to analyze notice
+        result = await ai_service.analyze_notice(request.notice_text)
+        
+        print(f"✓ AI Analysis complete: Platform={result.get('platform')}, Reason={result.get('reason')}")
+        
+        # Convert to response model
         return NoticeAnalyzeResponse(
-            platform="DoorDash",
-            reason="Customer Complaint",
-            urgency_level="URGENT",
-            deadline_days=7,
-            risk_level="Medium",
-            missing_info=["GPS proof", "Customer communication screenshots"],
-            recommendations=[
-                "Gather delivery completion photos",
-                "Document your account metrics",
-                "Review platform ToS regarding complaints"
-            ]
+            platform=result.get("platform", "Unknown"),
+            reason=result.get("reason", "Unable to determine"),
+            urgency_level=result.get("urgency_level", "MODERATE"),
+            deadline_days=result.get("deadline_days"),
+            risk_level=result.get("risk_level", "Medium"),
+            missing_info=result.get("missing_info", []),
+            recommendations=result.get("recommendations", [])
         )
         
     except Exception as e:
-        print(f"Error analyzing notice: {e}")
+        print(f"❌ Error analyzing notice: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/generate-appeal")
 async def generate_appeal(
     request: AppealCreate,
-    current_user: dict = Depends(get_current_user)  # ← Requires auth!
+    current_user: dict = Depends(get_current_user)
 ):
     """
-    Generate personalized appeal letter using AI.
+    Generate personalized appeal letter using Claude AI.
     Requires authentication.
     Saves the appeal to Firestore.
     """
     try:
-        # TODO: Import and use AI service when ready
-        # from app.services.ai_service import ai_service
-        # letter = await ai_service.generate_appeal(request)
+        print(f"✓ Generating appeal for user: {current_user['email']}")
         
-        # Mock letter for now
-        letter = f"""Dear {request.platform} Support Team,
-
-I am writing to respectfully appeal my account deactivation due to {request.deactivation_reason}.
-
-{request.user_story}
-
-I have been a dedicated driver on your platform for {request.account_tenure or 'several months'}, maintaining a {request.current_rating or '4.8'} rating with a {request.completion_rate or '95%'} completion rate across {request.total_deliveries or '1000+'} deliveries.
-
-I respectfully request that you review my case and reinstate my account.
-
-Thank you for your consideration.
-
-Sincerely,
-A Dedicated {request.platform} Partner
-"""
+        # Prepare account details
+        account_details = {
+            'account_tenure': request.account_tenure,
+            'current_rating': request.current_rating,
+            'completion_rate': request.completion_rate,
+            'total_deliveries': request.total_deliveries,
+            'user_state': request.user_state,
+            'appeal_tone': request.appeal_tone or 'professional'
+        }
+        
+        # Use AI service to generate letter
+        letter = await ai_service.generate_appeal(
+            platform=request.platform,
+            deactivation_reason=request.deactivation_reason,
+            user_story=request.user_story,
+            account_details=account_details
+        )
+        
+        print(f"✓ AI-generated letter ({len(letter)} chars)")
         
         # Save appeal to Firestore
         appeal_data = {
@@ -116,7 +125,7 @@ A Dedicated {request.platform} Partner
         
         appeal_id = await save_appeal(current_user['uid'], appeal_data)
         
-        print(f"✓ Appeal generated and saved for: {current_user['email']}")
+        print(f"✓ Appeal saved to Firestore: {appeal_id}")
         
         return {
             "appeal_id": appeal_id,
@@ -127,13 +136,13 @@ A Dedicated {request.platform} Partner
         }
         
     except Exception as e:
-        print(f"Error generating appeal: {e}")
+        print(f"❌ Error generating appeal: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/my-appeals")
 async def get_my_appeals(
-    current_user: dict = Depends(get_current_user)  # ← Requires auth!
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Get all appeals for the authenticated user.
@@ -148,34 +157,33 @@ async def get_my_appeals(
         }
         
     except Exception as e:
-        print(f"Error fetching appeals: {e}")
+        print(f"❌ Error fetching appeals: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    current_user: dict = Depends(get_current_user)  # ← Requires auth!
+    current_user: dict = Depends(get_current_user)
 ):
     """
-    Chat endpoint for the rights chatbot.
+    Chat endpoint for the rights chatbot using Claude AI.
     Requires authentication.
     """
     try:
-        # TODO: Import and use AI service when ready
-        # from app.services.ai_service import ai_service
-        # result = await ai_service.chat(request.message, request.conversation_history)
-        
-        # Mock response for now
         print(f"✓ Chat message from: {current_user['email']}")
+        
+        # Use AI service for chat
+        result = await ai_service.chat(
+            message=request.message,
+            conversation_history=request.conversation_history
+        )
+        
         return ChatResponse(
-            response="I understand you're asking about your rights. Based on platform policies and labor laws, here's what you need to know...",
-            suggested_actions=[
-                {"label": "Analyze Notice", "action": "notice-analyzer"},
-                {"label": "Start Appeal", "action": "wizard"}
-            ]
+            response=result["response"],
+            suggested_actions=result.get("suggested_actions", [])
         )
         
     except Exception as e:
-        print(f"Error in chat: {e}")
+        print(f"❌ Error in chat: {e}")
         raise HTTPException(status_code=500, detail=str(e))

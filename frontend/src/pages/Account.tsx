@@ -1,10 +1,132 @@
-import { User, Mail, Lock, Bell, CreditCard, LogOut } from 'lucide-react';
+import { User, Mail, Lock, Bell, CreditCard, LogOut, Check, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuths';
+import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db, auth as firebaseAuth } from '../config/firebase';
+import { logout } from '../services/authService';
+import { deleteUser } from 'firebase/auth';
 
 interface AccountProps {
   onNavigate: (page: string) => void;
 }
 
+interface UserProfile {
+  name: string;
+  email: string;
+  phoneNumber: string;
+  platform: string;
+}
+
 const Account = ({ onNavigate }: AccountProps) => {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<UserProfile>({
+    name: '',
+    email: '',
+    phoneNumber: '',
+    platform: ''
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setProfile({
+            name: data.name || user.displayName || '',
+            email: user.email || '',
+            phoneNumber: data.phoneNumber || '',
+            platform: data.platform || ''
+          });
+        } else {
+          // If no Firestore doc, use auth data
+          setProfile({
+            name: user.displayName || '',
+            email: user.email || '',
+            phoneNumber: '',
+            platform: ''
+          });
+        }
+      } catch (err) {
+        console.error('Error loading profile:', err);
+        setError('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        name: profile.name,
+        phoneNumber: profile.phoneNumber,
+        platform: profile.platform,
+        updatedAt: new Date().toISOString()
+      });
+
+      setSuccess('Profile updated successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Error saving profile:', err);
+      setError('Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      onNavigate('login');
+    } catch (err) {
+      console.error('Error logging out:', err);
+      setError('Failed to log out');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+
+    try {
+      // Delete user data from Firestore
+      await deleteDoc(doc(db, 'users', user.uid));
+      
+      // Delete Firebase auth account
+      await deleteUser(user);
+      
+      // Navigate to login
+      onNavigate('login');
+    } catch (err: any) {
+      console.error('Error deleting account:', err);
+      setError('Failed to delete account. You may need to re-authenticate first.');
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-slate-600">Loading profile...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
       <div className="max-w-5xl mx-auto">
@@ -20,16 +142,27 @@ const Account = ({ onNavigate }: AccountProps) => {
 
         {/* Profile Section */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+          {success && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+              <Check className="w-5 h-5 text-green-600" />
+              <p className="text-sm text-green-600">{success}</p>
+            </div>
+          )}
+          
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
           <div className="flex items-center gap-6 mb-6">
             <div className="w-24 h-24 bg-gradient-to-br from-[#1e3a5f] to-[#0d9488] rounded-full flex items-center justify-center">
               <User className="w-12 h-12 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">John Doe</h2>
-              <p className="text-slate-600">john.doe@email.com</p>
-              <button className="mt-2 text-[#0d9488] hover:underline text-sm font-medium">
-                Change profile picture
-              </button>
+              <h2 className="text-2xl font-bold text-slate-800">{profile.name || 'User'}</h2>
+              <p className="text-slate-600">{profile.email}</p>
             </div>
           </div>
 
@@ -40,7 +173,8 @@ const Account = ({ onNavigate }: AccountProps) => {
               </label>
               <input
                 type="text"
-                defaultValue="John Doe"
+                value={profile.name}
+                onChange={(e) => setProfile({...profile, name: e.target.value})}
                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent"
               />
             </div>
@@ -50,9 +184,11 @@ const Account = ({ onNavigate }: AccountProps) => {
               </label>
               <input
                 type="email"
-                defaultValue="john.doe@email.com"
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent"
+                value={profile.email}
+                disabled
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed"
               />
+              <p className="text-xs text-slate-500 mt-1">Email cannot be changed</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -60,7 +196,9 @@ const Account = ({ onNavigate }: AccountProps) => {
               </label>
               <input
                 type="tel"
-                defaultValue="+1 (555) 123-4567"
+                value={profile.phoneNumber}
+                onChange={(e) => setProfile({...profile, phoneNumber: e.target.value})}
+                placeholder="(555) 123-4567"
                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent"
               />
             </div>
@@ -68,18 +206,33 @@ const Account = ({ onNavigate }: AccountProps) => {
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Primary Platform
               </label>
-              <select className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent">
-                <option>DoorDash</option>
-                <option>Uber</option>
-                <option>Instacart</option>
-                <option>Lyft</option>
+              <select 
+                value={profile.platform}
+                onChange={(e) => setProfile({...profile, platform: e.target.value})}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent"
+              >
+                <option value="">Select platform...</option>
+                <option value="DoorDash">DoorDash</option>
+                <option value="Uber Eats">Uber Eats</option>
+                <option value="Uber">Uber</option>
+                <option value="Lyft">Lyft</option>
+                <option value="Instacart">Instacart</option>
+                <option value="Grubhub">Grubhub</option>
+                <option value="Postmates">Postmates</option>
+                <option value="Shipt">Shipt</option>
+                <option value="Amazon Flex">Amazon Flex</option>
+                <option value="Other">Other</option>
               </select>
             </div>
           </div>
 
           <div className="mt-6 flex justify-end">
-            <button className="px-6 py-3 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors">
-              Save Changes
+            <button 
+              onClick={handleSave}
+              disabled={saving}
+              className="px-6 py-3 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>
@@ -157,12 +310,41 @@ const Account = ({ onNavigate }: AccountProps) => {
               <h3 className="text-xl font-bold text-slate-800">Account Actions</h3>
             </div>
             <div className="space-y-3">
-              <button className="w-full px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium">
+              <button 
+                onClick={handleLogout}
+                className="w-full px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium"
+              >
                 Log Out
               </button>
-              <button className="w-full px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors font-medium">
-                Delete Account
-              </button>
+              
+              {!showDeleteConfirm ? (
+                <button 
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors font-medium"
+                >
+                  Delete Account
+                </button>
+              ) : (
+                <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                  <p className="text-sm text-red-800 mb-3 font-medium">
+                    Are you sure? This action cannot be undone. All your data will be permanently deleted.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDeleteAccount}
+                      className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium text-sm"
+                    >
+                      Yes, Delete My Account
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="flex-1 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors font-medium text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

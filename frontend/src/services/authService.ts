@@ -16,6 +16,8 @@ export interface SignUpData {
   email: string;
   password: string;
   name: string;
+  phoneNumber: string;
+  platform: string;
 }
 
 export interface LoginData {
@@ -24,7 +26,7 @@ export interface LoginData {
 }
 
 // Sign up new user
-export const signUp = async ({ email, password, name }: SignUpData): Promise<User> => {
+export const signUp = async ({ email, password, name, phoneNumber, platform }: SignUpData): Promise<User> => {
   // Create auth user
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   const user = userCredential.user;
@@ -36,6 +38,8 @@ export const signUp = async ({ email, password, name }: SignUpData): Promise<Use
   await setDoc(doc(db, 'users', user.uid), {
     email: user.email,
     name: name,
+    phoneNumber: phoneNumber,
+    platform: platform,
     createdAt: new Date().toISOString()
   });
 
