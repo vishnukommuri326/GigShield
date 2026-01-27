@@ -15,6 +15,8 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [platform, setPlatform] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,7 +32,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
     e.preventDefault();
     setError('');
 
-    if (!name || !email || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword || !phoneNumber || !platform) {
       setError('Please fill in all fields');
       return;
     }
@@ -59,9 +61,9 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
 
     // CHANGED: Now uses real Firebase auth
     try {
-      const user = await signUp({ email, password, name });
+      const user = await signUp({ email, password, name, phoneNumber, platform });
       onSignup(user.email!, name);
-      onNavigate('dashboard');
+      onNavigate('landing');
     } catch (err: any) {
       // Handle specific Firebase errors
       if (err.message.includes('email-already-in-use')) {
@@ -135,6 +137,50 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
                   className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent"
                 />
               </div>
+            </div>
+
+            {/* Phone Number */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Phone Number
+              </label>
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="(555) 123-4567"
+                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Platform Selection */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Primary Platform
+              </label>
+              <select
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent outline-none bg-white"
+                required
+              >
+                <option value="">Select your platform...</option>
+                <option value="DoorDash">DoorDash</option>
+                <option value="Uber Eats">Uber Eats</option>
+                <option value="Uber">Uber</option>
+                <option value="Lyft">Lyft</option>
+                <option value="Instacart">Instacart</option>
+                <option value="Grubhub">Grubhub</option>
+                <option value="Postmates">Postmates</option>
+                <option value="Shipt">Shipt</option>
+                <option value="Amazon Flex">Amazon Flex</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
 
             {/* Password */}

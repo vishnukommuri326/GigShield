@@ -109,6 +109,11 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
             <span className="text-2xl font-bold text-slate-900">GigShield</span>
           </div>
           <nav className="hidden md:flex items-center gap-8">
+            {user && user.displayName && (
+              <span className="text-sm font-medium text-slate-700">
+                Hello, {user.displayName}
+              </span>
+            )}
             <button 
               onClick={() => {
                 document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
