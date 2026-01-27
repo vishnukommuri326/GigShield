@@ -88,3 +88,20 @@ async def get_user_appeals(user_id: str) -> list:
         }
         for appeal in appeals
     ]
+
+async def delete_appeal(appeal_id: str, user_id: str) -> bool:
+    """Delete an appeal from Firestore"""
+    appeal_ref = db.collection('appeals').document(appeal_id)
+    appeal_doc = appeal_ref.get()
+    
+    if not appeal_doc.exists:
+        raise ValueError("Appeal not found")
+    
+    # Verify the appeal belongs to the user
+    appeal_data = appeal_doc.to_dict()
+    if appeal_data.get('userId') != user_id:
+        raise ValueError("Unauthorized to delete this appeal")
+    
+    appeal_ref.delete()
+    print(f"✓ Appeal deleted: {appeal_id}")
+    return True

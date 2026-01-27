@@ -10,14 +10,12 @@ from app.models.schemas import (
     ChatResponse
 )
 from app.core.auth_middleware import get_current_user
-from app.core.firebase import save_appeal, get_user_appeals
-from app.services.ai_service import ai_service  # ← NOW IMPORTING!
+from app.core.firebase import save_appeal, get_user_appeals, delete_appeal
+from app.services.ai_service import ai_service  
 
 router = APIRouter(prefix="/api", tags=["appeals"])
 
-# ============================================
-# PUBLIC ENDPOINTS (No Auth Required)
-# ============================================
+
 
 @router.get("/health")
 async def health_check():
@@ -186,4 +184,29 @@ async def chat(
         
     except Exception as e:
         print(f"❌ Error in chat: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/appeals/{appeal_id}")
+async def delete_appeal_endpoint(
+    appeal_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Delete an appeal by ID.
+    Only the user who created the appeal can delete it.
+    """
+    try:
+        await delete_appeal(appeal_id, current_user['uid'])
+        print(f"✓ Appeal deleted: {appeal_id} by {current_user['email']}")
+        
+        return {
+            "success": True,
+            "message": "Appeal deleted successfully"
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        print(f"❌ Error deleting appeal: {e}")
         raise HTTPException(status_code=500, detail=str(e))
