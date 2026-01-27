@@ -134,6 +134,20 @@ export const getMyAppeals = async (): Promise<Appeal[]> => {
 };
 
 /**
+ * Delete an appeal
+ */
+export const deleteAppeal = async (appealId: string): Promise<void> => {
+  const response = await authenticatedFetch(`/api/appeals/${appealId}`, {
+    method: 'DELETE'
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to delete appeal');
+  }
+};
+
+/**
  * Send a chat message
  */
 export const chatWithBot = async (
