@@ -1,12 +1,48 @@
-import { useState } from 'react';
-import { Shield, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, MapPin, FileText, Zap, Eye, Lock, Scale, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Shield, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, MapPin, FileText, Zap, Eye, Lock, Scale, Info, Search } from 'lucide-react';
+import { searchKnowledgeBase } from '../services/apiService';
 
 interface KnowledgeBaseProps {
   onNavigate: (page: string) => void;
 }
 
+interface Article {
+  id: string;
+  title: string;
+  category: string;
+  state: string;
+  platform: string;
+  content: string;
+  tags: string[];
+  relevance_score?: number;
+}
+
 const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
   const [selectedState, setSelectedState] = useState('California');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Article[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    setSearching(true);
+    try {
+      const result = await searchKnowledgeBase(searchQuery);
+      setSearchResults(result.results);
+    } catch (error) {
+      console.error('Search failed:', error);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const states = [
     'California', 'Washington', 'New York', 'Illinois', 'New Jersey', 'Texas', 'Florida', 'Other'
@@ -237,6 +273,103 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
             State protections, platform comparisons, and proactive tips to protect your account
           </p>
         </div>
+
+        {/* Search Bar */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Search className="w-6 h-6 text-[#0d9488]" />
+            <h2 className="text-xl font-bold text-slate-800">Search Knowledge Base</h2>
+          </div>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Search for laws, policies, appeal strategies..."
+              className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent"
+            />
+            <button
+              onClick={handleSearch}
+              disabled={searching || !searchQuery.trim()}
+              className="px-6 py-3 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {searching ? 'Searching...' : 'Search'}
+            </button>
+          </div>
+
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <div className="mt-6 space-y-4">
+              <h3 className="text-lg font-semibold text-slate-800">Search Results ({searchResults.length})</h3>
+              {searchResults.map((article) => (
+                <div 
+                  key={article.id} 
+                  className="border border-slate-200 rounded-lg p-4 hover:border-[#0d9488] transition-colors cursor-pointer"
+                  onClick={() => setSelectedArticle(article)}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className="text-lg font-bold text-[#1e3a5f]">{article.title}</h4>
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-xs px-2 py-1 bg-slate-100 text-slate-700 rounded">{article.category}</span>
+                        {article.state !== 'All' && (
+                          <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">{article.state}</span>
+                        )}
+                        {article.platform !== 'All' && (
+                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">{article.platform}</span>
+                        )}
+                      </div>
+                    </div>
+                    {article.relevance_score && (
+                      <span className="text-xs text-slate-500">Score: {article.relevance_score}</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-600 line-clamp-2">{article.content.substring(0, 150)}...</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Article Detail Modal */}
+        {selectedArticle && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8">
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold text-[#1e3a5f] mb-3">{selectedArticle.title}</h2>
+                <div className="flex gap-2">
+                  <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium">{selectedArticle.category}</span>
+                  {selectedArticle.state !== 'All' && (
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">{selectedArticle.state}</span>
+                  )}
+                  {selectedArticle.platform !== 'All' && (
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-medium">{selectedArticle.platform}</span>
+                  )}
+                </div>
+              </div>
+              <div className="prose max-w-none mb-6">
+                <pre className="whitespace-pre-wrap text-slate-700 font-sans">{selectedArticle.content}</pre>
+              </div>
+              {selectedArticle.tags.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-slate-600 mb-2">Tags:</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedArticle.tags.map((tag) => (
+                      <span key={tag} className="px-2 py-1 bg-slate-50 text-slate-600 rounded text-xs">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={() => setSelectedArticle(null)}
+                className="w-full px-6 py-3 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-colors font-semibold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* State Selector */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">

@@ -100,7 +100,41 @@ class KnowledgeBaseService:
             self.use_pinecone = False
         
     def _load_documents(self) -> List[Dict[str, Any]]:
-        """Load knowledge base documents"""
+        """Load knowledge base documents from Firestore"""
+        from app.core.firebase import db
+        
+        try:
+            # Fetch all documents from knowledge_base collection
+            docs_ref = db.collection('knowledge_base').stream()
+            documents = []
+            
+            for doc in docs_ref:
+                data = doc.to_dict()
+                # Convert to expected format
+                documents.append({
+                    'id': data.get('id', doc.id),
+                    'title': data.get('title', ''),
+                    'category': data.get('category', ''),
+                    'state': data.get('state', 'All'),
+                    'platform': data.get('platform', 'All'),
+                    'content': data.get('content', ''),
+                    'tags': data.get('tags', [])
+                })
+            
+            if documents:
+                print(f"✓ Loaded {len(documents)} documents from Firestore")
+                return documents
+            else:
+                print("⚠ No documents found in Firestore, using fallback")
+                return self._get_fallback_documents()
+                
+        except Exception as e:
+            print(f"❌ Error loading from Firestore: {e}")
+            print("⚠ Using fallback hardcoded documents")
+            return self._get_fallback_documents()
+    
+    def _get_fallback_documents(self) -> List[Dict[str, Any]]:
+        """Fallback hardcoded documents if Firestore fails"""
         return [
             {
                 "id": "ca-ab5",
@@ -221,6 +255,122 @@ class KnowledgeBaseService:
                 
                 State-Specific: CA and NY require detailed explanation and appeal rights.""",
                 "tags": ["uber", "deactivation", "rating", "appeal", "safety", "fraud", "greenlight hub"]
+            },
+            {
+                "id": "lyft-deactivation",
+                "title": "Lyft Deactivation Policy",
+                "category": "Platform Policies",
+                "state": "All",
+                "platform": "Lyft",
+                "content": """Lyft driver deactivation reasons and appeal process.
+                Common Deactivation Reasons:
+                - Star rating below 4.6-4.8 (market dependent)
+                - Acceptance rate too low (varies by market)
+                - Cancellation rate above 10%
+                - Safety incidents or customer complaints
+                - Fraudulent activity or policy violations
+                - Failed background check or annual inspection
+                - Vehicle does not meet platform standards
+                
+                Appeal Process:
+                - Appeal deadline: 30 days from deactivation
+                - Submit through Lyft Driver app or help.lyft.com
+                - Include trip logs, evidence, detailed explanation
+                - May require in-person Hub visit for serious issues
+                - Human review required in California and New York
+                
+                Key Metrics:
+                - Maintain 4.8+ rating in most markets
+                - Keep cancellation rate under 10%
+                - Accept ride requests when online (some markets)
+                
+                State-Specific: California Prop 22 requires transparency in deactivation decisions and appeal rights.
+                
+                Best Practices: Document all trips with screenshots, respond to appeals within 48 hours, maintain professional communication.""",
+                "tags": ["lyft", "deactivation", "rating", "cancellation rate", "appeal", "rideshare", "policy"]
+            },
+            {
+                "id": "instacart-deactivation",
+                "title": "Instacart Shopper Deactivation Policy",
+                "category": "Platform Policies",
+                "state": "All",
+                "platform": "Instacart",
+                "content": """Instacart shopper deactivation reasons and appeal process.
+                Common Deactivation Reasons:
+                - Customer rating below 4.7
+                - Order cancellation rate too high
+                - Late deliveries or missing items
+                - Fraudulent activity (false purchases, receipt manipulation)
+                - Poor shopping quality (wrong items, damaged products)
+                - Customer complaints about professionalism
+                - Alcohol delivery violations
+                
+                Appeal Process:
+                - Appeal deadline: 10-14 days from deactivation
+                - Contact through Shopper app or email to shoppers@instacart.com
+                - Provide order history, photos of deliveries, communication records
+                - Include explanation of circumstances beyond control
+                
+                Key Metrics:
+                - Maintain 4.7+ average rating
+                - Keep cancellation rate low (under 15%)
+                - On-time delivery rate above 90%
+                - Item accuracy and quality scores
+                
+                Common Issues:
+                - Out-of-stock items (not your fault - document substitutions)
+                - Customer address errors
+                - Apartment access issues
+                - Store supply problems
+                
+                California/Washington: Additional protections for transparency and appeal rights.
+                
+                Best Practices: Photo every delivery, communicate proactively about substitutions, keep timestamps of store issues.""",
+                "tags": ["instacart", "deactivation", "shopper", "rating", "delivery", "grocery", "appeal", "policy"]
+            },
+            {
+                "id": "amazon-flex-deactivation",
+                "title": "Amazon Flex Deactivation Policy",
+                "category": "Platform Policies",
+                "state": "All",
+                "platform": "Amazon Flex",
+                "content": """Amazon Flex delivery partner deactivation reasons and appeal process.
+                Common Deactivation Reasons:
+                - Reliability score below threshold
+                - Multiple late deliveries
+                - Missed blocks or last-minute forfeit
+                - Customer complaints (not received, damaged packages)
+                - Package misdelivery or theft
+                - Violation of delivery protocols
+                - Failed background check
+                
+                Appeal Process:
+                - Appeal deadline: 10 days from deactivation
+                - Email amazonflex-appeals@amazon.com
+                - Include delivery records, GPS data, photos, block history
+                - Provide detailed explanation with supporting evidence
+                - Response time varies (3-14 days typically)
+                
+                Key Metrics:
+                - Reliability score (on-time delivery, block completion)
+                - Customer feedback rating
+                - Delivery success rate
+                - Block acceptance and completion
+                
+                Critical Issues:
+                - Late arrivals to warehouse can impact reliability
+                - Package scanning errors
+                - Photo proof of delivery required
+                - Route completion within timeframe
+                
+                State Protections:
+                - California: Transparency in deactivation decisions
+                - Washington: Appeal rights and specific reason disclosure
+                
+                Best Practices: Always photograph deliveries, arrive early to blocks, track all packages carefully, document any app issues or route problems.
+                
+                Note: Amazon Flex is strict on reliability - multiple late blocks can lead to deactivation even with good delivery ratings.""",
+                "tags": ["amazon flex", "deactivation", "reliability", "delivery", "appeal", "blocks", "policy"]
             },
             {
                 "id": "appeal-evidence",
