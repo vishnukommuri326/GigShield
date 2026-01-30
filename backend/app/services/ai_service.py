@@ -89,10 +89,11 @@ Respond in JSON format with these exact keys:
         deactivation_reason: str,
         user_story: str,
         account_details: Dict[str, Any],
-        user_data: Dict[str, Any] = None
+        user_data: Dict[str, Any] = None,
+        knowledge_context: str = None
     ) -> str:
         """
-        Generate a personalized appeal letter using Claude
+        Generate a personalized appeal letter using Claude with RAG
         """
         # Extract user contact info with multiple fallback options
         user_name = (user_data.get('displayName') or 
@@ -104,6 +105,16 @@ Respond in JSON format with these exact keys:
         # Get current date
         from datetime import datetime
         current_date = datetime.now().strftime('%B %d, %Y')
+        
+        # Build prompt with knowledge context
+        context_section = ""
+        if knowledge_context:
+            context_section = f"""
+RELEVANT POLICY AND LEGAL INFORMATION:
+{knowledge_context}
+
+Use the above information to strengthen the appeal with specific policy citations and legal rights.
+"""
         
         prompt = f"""You are an expert legal writer specializing in gig economy worker appeals.
 
@@ -130,7 +141,7 @@ WORKER'S CONTACT INFORMATION:
 - Phone: {user_phone}
 
 TONE: {account_details.get('appeal_tone', 'professional')}
-
+{context_section}
 Generate a complete appeal letter that:
 1. Is professionally formatted with proper business letter structure
 2. START with the actual date: {current_date}
@@ -138,10 +149,12 @@ Generate a complete appeal letter that:
 4. Highlights the worker's positive track record
 5. Addresses the deactivation reason respectfully
 6. Provides context from the worker's perspective
-7. Requests specific information about the incident
-8. Asks for reinstatement with clear justification
-9. Maintains the requested tone
-10. ENDS with the worker's actual contact information (name, phone, email) instead of placeholders
+7. References specific platform policies and state laws when applicable (from the provided context)
+8. Cites relevant legal protections and rights
+9. Requests specific information about the incident
+10. Asks for reinstatement with clear justification
+11. Maintains the requested tone
+12. ENDS with the worker's actual contact information (name, phone, email) instead of placeholders
 
 IMPORTANT FORMATTING:
 - Use PLAIN TEXT ONLY - no markdown, no asterisks, no special formatting
@@ -149,6 +162,7 @@ IMPORTANT FORMATTING:
 - Use proper spacing and line breaks for emphasis instead
 - Write in standard business letter format
 - Use the actual date provided above, not [Current Date] or any placeholder
+- When citing policies, reference them naturally (e.g., "Under California's AB5...")
 
 Make it persuasive but respectful.
 Use the actual worker's name, phone, and email in the signature - DO NOT use placeholders like [Your Name], [Your Phone], or [Your Email]."""
