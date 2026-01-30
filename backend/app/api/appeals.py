@@ -86,6 +86,25 @@ async def generate_appeal(
     try:
         print(f"✓ Generating appeal for user: {current_user['email']}")
         
+        # Fetch user data from Firestore for contact info
+        from app.core.firebase import get_user_data
+        user_data = await get_user_data(current_user['uid'])
+        
+        # Merge Firestore data with auth token data to ensure we have all fields
+        if user_data:
+            # Add email and name from auth token if not in Firestore
+            if 'email' not in user_data or not user_data.get('email'):
+                user_data['email'] = current_user.get('email', '')
+            if 'displayName' not in user_data or not user_data.get('displayName'):
+                user_data['displayName'] = current_user.get('name', '')
+        else:
+            # If no Firestore data, use auth token data
+            user_data = {
+                'email': current_user.get('email', ''),
+                'displayName': current_user.get('name', ''),
+                'phoneNumber': ''
+            }
+        
         # Prepare account details
         account_details = {
             'account_tenure': request.account_tenure,
@@ -96,12 +115,13 @@ async def generate_appeal(
             'appeal_tone': request.appeal_tone or 'professional'
         }
         
-        # Use AI service to generate letter
+        # Use AI service to generate letter with user data
         letter = await ai_service.generate_appeal(
             platform=request.platform,
             deactivation_reason=request.deactivation_reason,
             user_story=request.user_story,
-            account_details=account_details
+            account_details=account_details,
+            user_data=user_data
         )
         
         print(f"✓ AI-generated letter ({len(letter)} chars)")
