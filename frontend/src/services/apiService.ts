@@ -148,6 +148,63 @@ export const deleteAppeal = async (appealId: string): Promise<void> => {
 };
 
 /**
+ * Search knowledge base
+ */
+export const searchKnowledgeBase = async (
+  query: string,
+  filters?: { category?: string; state?: string; platform?: string }
+): Promise<any> => {
+  const params = new URLSearchParams({ query });
+  if (filters?.category) params.append('category', filters.category);
+  if (filters?.state) params.append('state', filters.state);
+  if (filters?.platform) params.append('platform', filters.platform);
+  
+  const response = await fetch(`${API_BASE_URL}/api/knowledge-base/search?${params}`);
+  
+  if (!response.ok) {
+    throw new Error('Failed to search knowledge base');
+  }
+  
+  return await response.json();
+};
+
+/**
+ * Get knowledge base categories
+ */
+export const getKnowledgeBaseCategories = async (): Promise<string[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/knowledge-base/categories`);
+  if (!response.ok) {
+    throw new Error('Failed to get categories');
+  }
+  const data = await response.json();
+  return data.categories;
+};
+
+/**
+ * Get knowledge base states
+ */
+export const getKnowledgeBaseStates = async (): Promise<string[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/knowledge-base/states`);
+  if (!response.ok) {
+    throw new Error('Failed to get states');
+  }
+  const data = await response.json();
+  return data.states;
+};
+
+/**
+ * Get knowledge base platforms
+ */
+export const getKnowledgeBasePlatforms = async (): Promise<string[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/knowledge-base/platforms`);
+  if (!response.ok) {
+    throw new Error('Failed to get platforms');
+  }
+  const data = await response.json();
+  return data.platforms;
+};
+
+/**
  * Send a chat message
  */
 export const chatWithBot = async (
