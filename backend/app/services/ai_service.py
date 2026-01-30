@@ -88,14 +88,28 @@ Respond in JSON format with these exact keys:
         platform: str,
         deactivation_reason: str,
         user_story: str,
-        account_details: Dict[str, Any]
+        account_details: Dict[str, Any],
+        user_data: Dict[str, Any] = None
     ) -> str:
         """
         Generate a personalized appeal letter using Claude
         """
+        # Extract user contact info with multiple fallback options
+        user_name = (user_data.get('displayName') or 
+                    user_data.get('name') or 
+                    'Worker') if user_data else 'Worker'
+        user_email = user_data.get('email', '') if user_data else ''
+        user_phone = user_data.get('phoneNumber', '') if user_data else ''
+        
+        # Get current date
+        from datetime import datetime
+        current_date = datetime.now().strftime('%B %d, %Y')
+        
         prompt = f"""You are an expert legal writer specializing in gig economy worker appeals.
 
 Generate a professional, persuasive appeal letter for a gig worker whose account has been deactivated.
+
+CURRENT DATE: {current_date}
 
 PLATFORM: {platform}
 DEACTIVATION REASON: {deactivation_reason}
@@ -110,20 +124,34 @@ WORKER'S ACCOUNT DETAILS:
 WORKER'S EXPLANATION:
 {user_story}
 
+WORKER'S CONTACT INFORMATION:
+- Name: {user_name}
+- Email: {user_email}
+- Phone: {user_phone}
+
 TONE: {account_details.get('appeal_tone', 'professional')}
 
 Generate a complete appeal letter that:
 1. Is professionally formatted with proper business letter structure
-2. States the purpose clearly in the opening
-3. Highlights the worker's positive track record
-4. Addresses the deactivation reason respectfully
-5. Provides context from the worker's perspective
-6. Requests specific information about the incident
-7. Asks for reinstatement with clear justification
-8. Maintains the requested tone
+2. START with the actual date: {current_date}
+3. States the purpose clearly in the opening
+4. Highlights the worker's positive track record
+5. Addresses the deactivation reason respectfully
+6. Provides context from the worker's perspective
+7. Requests specific information about the incident
+8. Asks for reinstatement with clear justification
+9. Maintains the requested tone
+10. ENDS with the worker's actual contact information (name, phone, email) instead of placeholders
 
-Include proper spacing, date, addressing, and signature blocks.
-Make it persuasive but respectful."""
+IMPORTANT FORMATTING:
+- Use PLAIN TEXT ONLY - no markdown, no asterisks, no special formatting
+- Do NOT use ** for bold or * for emphasis
+- Use proper spacing and line breaks for emphasis instead
+- Write in standard business letter format
+- Use the actual date provided above, not [Current Date] or any placeholder
+
+Make it persuasive but respectful.
+Use the actual worker's name, phone, and email in the signature - DO NOT use placeholders like [Your Name], [Your Phone], or [Your Email]."""
 
         try:
             response = self.client.messages.create(
@@ -132,12 +160,25 @@ Make it persuasive but respectful."""
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            return response.content[0].text
+            # Remove any remaining asterisks that might be used for emphasis
+            letter = response.content[0].text
+            letter = letter.replace('**', '').replace('*', '')
+            
+            return letter
             
         except Exception as e:
             print(f"Error generating appeal with AI: {e}")
+            # Extract user contact info for fallback
+            user_name = user_data.get('displayName', '[Your Name]') if user_data else '[Your Name]'
+            user_email = user_data.get('email', '[Your Email]') if user_data else '[Your Email]'
+            user_phone = user_data.get('phoneNumber', '[Your Phone]') if user_data else '[Your Phone]'
+            
+            # Get current date for fallback
+            from datetime import datetime
+            current_date = datetime.now().strftime('%B %d, %Y')
+            
             # Return basic template as fallback
-            return f"""[Current Date]
+            return f"""{current_date}
 
 {platform} Appeals Team
 Re: Appeal of Account Deactivation
@@ -153,7 +194,9 @@ I have maintained a strong record on your platform and request that you review m
 Thank you for your consideration.
 
 Sincerely,
-[Your Name]"""
+{user_name}
+{user_email}
+{user_phone}"""
     
     async def chat(self, message: str, conversation_history: List[Dict[str, str]] = None) -> Dict[str, Any]:
         """
