@@ -1,5 +1,4 @@
 # backend/app/api/appeals.py
-# REPLACE YOUR EXISTING FILE WITH THIS
 
 from fastapi import APIRouter, HTTPException, Depends
 from app.models.schemas import (
@@ -10,11 +9,12 @@ from app.models.schemas import (
     ChatResponse
 )
 from app.core.auth_middleware import get_current_user
-from app.core.firebase import save_appeal, get_user_appeals, delete_appeal
-from app.services.ai_service import ai_service  
+from app.core.firebase import save_appeal, get_user_appeals, delete_appeal, get_user_data
+from app.services.ai_service import ai_service
+from app.services.knowledge_base import knowledge_base_service
+from typing import Optional
 
 router = APIRouter(prefix="/api", tags=["appeals"])
-
 
 
 @router.get("/health")
@@ -30,10 +30,14 @@ async def health_check():
         len(anthropic_key) > 20
     )
     
+    # Check Pinecone configuration
+    pinecone_configured = bool(os.getenv("PINECONE_API_KEY"))
+    
     return {
         "status": "healthy",
         "firebase_configured": bool(os.getenv("FIREBASE_PROJECT_ID")),
-        "anthropic_configured": anthropic_configured
+        "anthropic_configured": anthropic_configured,
+        "pinecone_configured": pinecone_configured
     }
 
 # ============================================
@@ -79,7 +83,7 @@ async def generate_appeal(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Generate personalized appeal letter using Claude AI.
+    Generate personalized appeal letter using Claude AI with RAG.
     Requires authentication.
     Saves the appeal to Firestore.
     """
@@ -87,7 +91,6 @@ async def generate_appeal(
         print(f"✓ Generating appeal for user: {current_user['email']}")
         
         # Fetch user data from Firestore for contact info
-        from app.core.firebase import get_user_data
         user_data = await get_user_data(current_user['uid'])
         
         # Merge Firestore data with auth token data to ensure we have all fields
@@ -105,6 +108,16 @@ async def generate_appeal(
                 'phoneNumber': ''
             }
         
+        # Get relevant knowledge base context for RAG
+        knowledge_context = knowledge_base_service.get_relevant_context(
+            platform=request.platform,
+            state=request.user_state or 'California',
+            reason=request.deactivation_reason,
+            top_k=3
+        )
+        
+        print(f"✓ Retrieved {len(knowledge_context)} chars of knowledge context")
+        
         # Prepare account details
         account_details = {
             'account_tenure': request.account_tenure,
@@ -115,13 +128,14 @@ async def generate_appeal(
             'appeal_tone': request.appeal_tone or 'professional'
         }
         
-        # Use AI service to generate letter with user data
+        # Use AI service to generate letter with user data and knowledge context
         letter = await ai_service.generate_appeal(
             platform=request.platform,
             deactivation_reason=request.deactivation_reason,
             user_story=request.user_story,
             account_details=account_details,
-            user_data=user_data
+            user_data=user_data,
+            knowledge_context=knowledge_context
         )
         
         print(f"✓ AI-generated letter ({len(letter)} chars)")
@@ -229,4 +243,72 @@ async def delete_appeal_endpoint(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         print(f"❌ Error deleting appeal: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/knowledge-base/search")
+async def search_knowledge_base(
+    query: str,
+    category: Optional[str] = None,
+    state: Optional[str] = None,
+    platform: Optional[str] = None,
+    top_k: int = 5
+):
+    """
+    Search the knowledge base for relevant articles.
+    Public endpoint - no authentication required.
+    """
+    try:
+        # Get search results
+        results = knowledge_base_service.search(query, top_k=top_k)
+        
+        # Apply additional filters if provided
+        if category:
+            results = [r for r in results if r['category'] == category]
+        if state:
+            results = [r for r in results if r['state'] == state or r['state'] == 'All']
+        if platform:
+            results = [r for r in results if platform in r['platform'] or r['platform'] == 'All']
+        
+        return {
+            "query": query,
+            "results": results,
+            "total": len(results)
+        }
+        
+    except Exception as e:
+        print(f"❌ Error searching knowledge base: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/knowledge-base/categories")
+async def get_categories():
+    """Get all available categories in the knowledge base"""
+    try:
+        return {
+            "categories": knowledge_base_service.get_all_categories()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/knowledge-base/states")
+async def get_states():
+    """Get all available states in the knowledge base"""
+    try:
+        return {
+            "states": knowledge_base_service.get_all_states()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/knowledge-base/platforms")
+async def get_platforms():
+    """Get all available platforms in the knowledge base"""
+    try:
+        return {
+            "platforms": knowledge_base_service.get_all_platforms()
+        }
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
