@@ -214,18 +214,63 @@ Sincerely,
     
     async def chat(self, message: str, conversation_history: List[Dict[str, str]] = None) -> Dict[str, Any]:
         """
-        Handle chatbot conversations about worker rights
+        Handle chatbot conversations about worker rights using RAG
         """
-        system_prompt = """You are a helpful assistant specializing in gig economy worker rights, platform policies, and appeal processes. 
+        from .knowledge_base import knowledge_base_service
+        
+        # Extract potential platform, state, and reason from user message
+        message_lower = message.lower()
+        
+        # Detect platform
+        platform = None
+        platforms = ['uber', 'doordash', 'lyft', 'instacart', 'amazon flex', 'grubhub']
+        for p in platforms:
+            if p in message_lower:
+                platform = p
+                break
+        
+        # Detect state
+        state = None
+        states = ['texas', 'california', 'florida', 'illinois', 'massachusetts', 
+                  'colorado', 'oregon', 'washington', 'new york', 'chicago', 'portland', 'seattle']
+        for s in states:
+            if s in message_lower:
+                state = s
+                break
+        
+        # Detect deactivation reason
+        reason = None
+        reasons = ['rating', 'completion rate', 'fraud', 'safety', 'background check', 'policy violation']
+        for r in reasons:
+            if r in message_lower:
+                reason = r
+                break
+        
+        # Get relevant context from knowledge base using RAG
+        context = ""
+        if platform or state or reason:
+            context = knowledge_base_service.get_relevant_context(
+                platform=platform or "",
+                state=state or "",
+                reason=reason or "",
+                top_k=3  # Get top 3 most relevant documents
+            )
+        
+        system_prompt = f"""You are a helpful assistant specializing in gig economy worker rights, platform policies, and appeal processes. 
 
 You help workers understand:
-- Their rights under platform terms of service
-- How to appeal deactivations
-- What documentation they should gather
-- Platform-specific policies (DoorDash, Uber, Lyft, Instacart, etc.)
-- Labor laws relevant to gig workers
+- Their rights under platform terms of service and state labor laws
+- How to appeal deactivations successfully
+- What documentation and evidence they should gather
+- Platform-specific policies (DoorDash, Uber, Lyft, Instacart, Amazon Flex)
+- State-specific labor laws and protections
+- Appeal deadlines and timelines
 
-Be supportive, informative, and action-oriented. Provide specific steps workers can take."""
+Be supportive, informative, and action-oriented. Provide specific steps workers can take.
+
+IMPORTANT: Use the KNOWLEDGE BASE CONTEXT below to provide accurate, specific information about laws, policies, and procedures.
+
+{context}"""
 
         # Build message history
         messages = []
@@ -238,17 +283,36 @@ Be supportive, informative, and action-oriented. Provide specific steps workers 
         try:
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=1024,
+                max_tokens=1500,  # Increased for more detailed responses
                 system=system_prompt,
                 messages=messages
             )
             
-            return {
-                "response": response.content[0].text,
-                "suggested_actions": [
+            # Determine suggested actions based on user question
+            suggested_actions = []
+            
+            if any(word in message_lower for word in ['appeal', 'letter', 'generate', 'write']):
+                suggested_actions.append({"label": "Generate Appeal", "action": "wizard"})
+            
+            if any(word in message_lower for word in ['notice', 'deactivation', 'analyze']):
+                suggested_actions.append({"label": "Analyze Notice", "action": "notice-analyzer"})
+            
+            if any(word in message_lower for word in ['evidence', 'proof', 'documentation']):
+                suggested_actions.append({"label": "Organize Evidence", "action": "evidence-organizer"})
+            
+            if any(word in message_lower for word in ['law', 'rights', 'legal', 'state']):
+                suggested_actions.append({"label": "Browse Laws", "action": "knowledge-base"})
+            
+            # Default actions if none detected
+            if not suggested_actions:
+                suggested_actions = [
                     {"label": "Analyze Notice", "action": "notice-analyzer"},
                     {"label": "Start Appeal", "action": "wizard"}
                 ]
+            
+            return {
+                "response": response.content[0].text,
+                "suggested_actions": suggested_actions
             }
             
         except Exception as e:
