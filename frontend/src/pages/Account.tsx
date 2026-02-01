@@ -15,6 +15,7 @@ interface UserProfile {
   email: string;
   phoneNumber: string;
   platform: string;
+  platformAccountId: string;
 }
 
 const Account = ({ onNavigate }: AccountProps) => {
@@ -23,13 +24,30 @@ const Account = ({ onNavigate }: AccountProps) => {
     name: '',
     email: '',
     phoneNumber: '',
-    platform: ''
+    platform: '',
+    platformAccountId: ''
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Get platform-specific account ID label
+  const getPlatformAccountIdLabel = () => {
+    const labels: { [key: string]: string } = {
+      'DoorDash': 'Dasher ID',
+      'Uber': 'Partner ID',
+      'Uber Eats': 'Partner ID',
+      'Lyft': 'Driver ID',
+      'Instacart': 'Shopper ID',
+      'Grubhub': 'Driver ID',
+      'Postmates': 'Fleet ID',
+      'Shipt': 'Shopper ID',
+      'Amazon Flex': 'Driver ID'
+    };
+    return labels[profile.platform] || 'Account ID';
+  };
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -43,7 +61,8 @@ const Account = ({ onNavigate }: AccountProps) => {
             name: data.name || user.displayName || '',
             email: user.email || '',
             phoneNumber: data.phoneNumber || '',
-            platform: data.platform || ''
+            platform: data.platform || '',
+            platformAccountId: data.platformAccountId || ''
           });
         } else {
           // If no Firestore doc, use auth data
@@ -51,7 +70,8 @@ const Account = ({ onNavigate }: AccountProps) => {
             name: user.displayName || '',
             email: user.email || '',
             phoneNumber: '',
-            platform: ''
+            platform: '',
+            platformAccountId: ''
           });
         }
       } catch (err) {
@@ -77,6 +97,7 @@ const Account = ({ onNavigate }: AccountProps) => {
         name: profile.name,
         phoneNumber: profile.phoneNumber,
         platform: profile.platform,
+        platformAccountId: profile.platformAccountId,
         updatedAt: new Date().toISOString()
       });
 
@@ -223,6 +244,25 @@ const Account = ({ onNavigate }: AccountProps) => {
                 <option value="Amazon Flex">Amazon Flex</option>
                 <option value="Other">Other</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                {getPlatformAccountIdLabel()}
+              </label>
+              <input
+                type="text"
+                value={profile.platformAccountId}
+                onChange={(e) => setProfile({...profile, platformAccountId: e.target.value})}
+                placeholder={profile.platform ? `e.g., ${getPlatformAccountIdLabel()}: ABC-123456` : 'Select a platform first'}
+                disabled={!profile.platform}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                {profile.platform 
+                  ? `Your ${getPlatformAccountIdLabel()} from ${profile.platform}`
+                  : 'Select your platform to enter your account ID'
+                }
+              </p>
             </div>
           </div>
 

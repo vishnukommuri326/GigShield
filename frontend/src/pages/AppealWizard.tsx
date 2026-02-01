@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Check, Upload, Sparkles, AlertCircle, X, FileText, Image } from 'lucide-react';
 import { generateAppeal, uploadEvidence } from '../services/apiService';
+import { auth } from '../config/firebase';
 import jsPDF from 'jspdf';
 
 interface AppealWizardProps {
@@ -367,20 +368,8 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
       }
     });
 
-    // Add signature section if not already in generated letter
-    if (!letterText.includes('Sincerely')) {
-      yPosition += lineHeight;
-      doc.text('Sincerely,', leftMargin, yPosition);
-      yPosition += lineHeight * 3;
-      doc.text('[Your Full Name]', leftMargin, yPosition);
-      yPosition += lineHeight;
-      doc.text('[Your Phone Number]', leftMargin, yPosition);
-      yPosition += lineHeight;
-      doc.text('[Your Email Address]', leftMargin, yPosition);
-      yPosition += lineHeight;
-      doc.setFont('helvetica', 'bold');
-      doc.text('ACCOUNT ID: [Your Account ID]', leftMargin, yPosition);
-    }
+    // Don't add signature section - it's already in the generated letter
+    // The AI includes the signature with user details from the backend
 
     // Add footer with GigShield branding
     const pageCount = doc.getNumberOfPages();
