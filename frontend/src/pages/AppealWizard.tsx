@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ArrowLeft, Check, Upload, Sparkles, AlertCircle } from 'lucide-react';
-import { generateAppeal } from '../services/apiService';
+import { ArrowLeft, Check, Upload, Sparkles, AlertCircle, X, FileText, Image } from 'lucide-react';
+import { generateAppeal, uploadEvidence } from '../services/apiService';
 import jsPDF from 'jspdf';
 
 interface AppealWizardProps {
@@ -15,12 +15,21 @@ interface Platform {
   icon: string;
 }
 
+interface UploadedFile {
+  url: string;
+  filename: string;
+  contentType: string;
+}
+
 const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedLetter, setGeneratedLetter] = useState('');
   const [appealId, setAppealId] = useState('');
   const [error, setError] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [uploadedNoticeFile, setUploadedNoticeFile] = useState<UploadedFile | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   // Step 1: Platform Selection
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
@@ -75,6 +84,180 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
     navigator.clipboard.writeText(letterText).then(() => {
       alert('Appeal letter copied to clipboard!');
     });
+  };
+
+  // Generate condensed version for web forms (Uber, Lyft)
+  const generateCondensedVersion = () => {
+    // Build condensed version maintaining quality
+    let condensed = `APPEAL FOR ACCOUNT DEACTIVATION - ${getPlatformName()}\n\n`;
+    
+    // Opening statement
+    condensed += `I am appealing the deactivation of my ${getPlatformName()} account. `;
+    if (accountTenure) {
+      condensed += `I have been a ${selectedPlatform === 'uber' || selectedPlatform === 'lyft' ? 'driver' : 'worker'} for ${accountTenure} with `;
+    }
+    if (currentRating) condensed += `a ${currentRating} rating, `;
+    if (completionRate) condensed += `${completionRate} completion rate, and `;
+    if (totalDeliveries) condensed += `${totalDeliveries} total ${selectedPlatform === 'uber' || selectedPlatform === 'lyft' ? 'rides' : 'deliveries'} completed`;
+    condensed += '.\n\n';
+    
+    // Core argument
+    if (userStory) {
+      condensed += `WHAT HAPPENED:\n${userStory}\n\n`;
+    }
+    
+    // Evidence
+    if (evidence || uploadedFiles.length > 0) {
+      condensed += `EVIDENCE:\n`;
+      if (evidence) condensed += `${evidence}\n`;
+      if (uploadedFiles.length > 0) {
+        condensed += `\nUploaded files:\n`;
+        uploadedFiles.forEach((file, i) => {
+          condensed += `${i + 1}. ${file.filename}: ${file.url}\n`;
+        });
+      }
+      condensed += '\n';
+    }
+    
+    // Request
+    condensed += `REQUEST:\nI request immediate account reinstatement and ask that you provide:\n`;
+    condensed += `1. Specific incident details (dates, times, trip numbers)\n`;
+    condensed += `2. Evidence supporting the deactivation\n`;
+    condensed += `3. Opportunity to review and respond to any complaints\n\n`;
+    
+    // State protections
+    if (userState && ['California', 'Washington', 'New York', 'New Jersey'].includes(userState)) {
+      condensed += `As a gig worker in ${userState}, I am entitled to transparency in deactivation decisions and the right to appeal with supporting evidence under state law.\n\n`;
+    }
+    
+    // Closing
+    condensed += `My consistent performance record demonstrates my commitment to ${getPlatformName()}'s standards. `;
+    condensed += `I believe this deactivation was made in error and request a thorough review of my account history.\n\n`;
+    
+    condensed += `Thank you for your consideration.`;
+    
+    return condensed;
+  };
+
+  // Copy condensed version for web forms
+  const copyCondensedVersion = () => {
+    const condensed = generateCondensedVersion();
+    navigator.clipboard.writeText(condensed).then(() => {
+      if (selectedPlatform === 'uber') {
+        alert('✅ Condensed appeal copied!\n\nUber has 3 questions:\n\n1. "Why should your account be reviewed?" - Paste your opening + what happened\n\n2. "Why were actions justified/not abuse?" - Explain violations + cite your evidence\n\n3. "Further clarification?" - Paste your requests + state protections\n\nSplit the copied text across these 3 answers.');
+      } else {
+        alert('Condensed version copied! Paste into web form.');
+      }
+    });
+  };
+
+  // Get platform-specific submission instructions
+  const getSubmissionInstructions = () => {
+    const instructions: { [key: string]: any } = {
+      'doordash': {
+        method: 'Email',
+        contact: 'Submit through DoorDash Support',
+        url: 'help.doordash.com/dashers',
+        steps: [
+          'Go to help.doordash.com/dashers',
+          'Select "Account" then "Appeal Deactivation"',
+          'Submit appeal through email form',
+          'Attach your appeal letter PDF or paste full text',
+          'Include any evidence files'
+        ],
+        deadline: 'Appeal ASAP - no official deadline but time matters',
+        format: 'Email with attachments (PDF letter + evidence files)'
+      },
+      'uber': {
+        method: 'Web Form',
+        contact: 'help.uber.com → Account & Payment → Account has been deactivated',
+        url: 'help.uber.com',
+        steps: [
+          'Go to help.uber.com',
+          'Select "Account & Payment" → "My account has been deactivated"',
+          'Choose "Appeal process: my account has been deactivated"',
+          'Click "Copy for Web Form" button above to copy your condensed appeal',
+          'Question 1: Paste first half of condensed appeal (why account should be reviewed)',
+          'Question 2: Explain why suspension was not justified and cite specific violations',
+          'Question 3: Paste remaining evidence and requests from condensed appeal',
+          'Submit and expect response within 3 working days'
+        ],
+        deadline: 'No strict deadline, but 3-day review turnaround',
+        format: 'Web form with 3 text questions (use condensed version, split across answers)'
+      },
+      'lyft': {
+        method: 'Help Center Ticket',
+        contact: 'help.lyft.com/hc',
+        url: 'help.lyft.com/hc',
+        steps: [
+          'Go to help.lyft.com/hc',
+          'Select "Submit a request"',
+          'Choose "Account Issue" category',
+          'Use "Copy for Web Form" button or attach PDF',
+          'Include evidence files'
+        ],
+        deadline: '30 days from deactivation',
+        format: 'Support ticket (accepts text or attachments)'
+      },
+      'instacart': {
+        method: 'Email',
+        contact: 'trust_safety@instacart.com',
+        url: 'shoppers.instacart.com/support',
+        steps: [
+          'Email: trust_safety@instacart.com',
+          'Subject: "Appeal - Account Deactivation"',
+          'Attach your appeal letter PDF',
+          'Attach ALL evidence: photos, screenshots, chat logs',
+          'Also submit through shoppers.instacart.com/support'
+        ],
+        deadline: 'Appeal immediately (they claim 48hr response)',
+        format: 'Email with PDF letter + evidence attachments'
+      },
+      'amazonflex': {
+        method: 'Email',
+        contact: 'amazonflex-appeals@amazon.com',
+        url: 'flex.amazon.com/support',
+        steps: [
+          'Reply to deactivation email OR',
+          'Email: amazonflex-appeals@amazon.com',
+          'Attach your appeal letter PDF',
+          'Include dates, times, block numbers, evidence',
+          'Be detailed and professional'
+        ],
+        deadline: '⚠️ 10 DAYS from deactivation (STRICT)',
+        format: 'Email with PDF letter + evidence attachments'
+      },
+      'shipt': {
+        method: 'Email',
+        contact: 'shoppersuccess@shipt.com',
+        url: 'shoppers.shipt.com/support',
+        steps: [
+          'Email: shoppersuccess@shipt.com',
+          'Subject: "Account Deactivation Appeal"',
+          'Attach your appeal letter PDF',
+          'Include order numbers and evidence',
+          'Follow up through shoppers.shipt.com if no response'
+        ],
+        deadline: '10 days from deactivation',
+        format: 'Email with PDF letter + evidence'
+      },
+      'grubhub': {
+        method: 'Email',
+        contact: 'Driver Support Portal',
+        url: 'driver-support.grubhub.com',
+        steps: [
+          'Go to driver-support.grubhub.com',
+          'Submit ticket for "Account Issues"',
+          'Attach your appeal letter PDF',
+          'Include evidence and block information',
+          'Call Driver Care: 1-866-834-3963'
+        ],
+        deadline: '14 days from deactivation',
+        format: 'Email through support portal + PDF attachments'
+      }
+    };
+
+    return instructions[selectedPlatform] || instructions['doordash'];
   };
 
   // Download appeal as PDF
@@ -290,17 +473,38 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
     setError('');
 
     try {
+      // Build deactivation reason with notice file if uploaded
+      let deactivationReasonText = deactivationNotice || '';
+      if (uploadedNoticeFile) {
+        if (deactivationReasonText) {
+          deactivationReasonText += '\n\n';
+        }
+        deactivationReasonText += `=== DEACTIVATION NOTICE FILE ===\n`;
+        deactivationReasonText += `File: ${uploadedNoticeFile.filename}\n`;
+        deactivationReasonText += `View: ${uploadedNoticeFile.url}\n`;
+      }
+
+      // Build evidence text with file URLs
+      let evidenceText = evidence || '';
+      if (uploadedFiles.length > 0) {
+        evidenceText += '\n\n=== UPLOADED EVIDENCE FILES ===\n';
+        uploadedFiles.forEach((file, index) => {
+          evidenceText += `\n${index + 1}. ${file.filename}\n   View: ${file.url}\n`;
+        });
+      }
+
       // Call backend API to generate appeal
       const result = await generateAppeal({
         platform: selectedPlatform,
-        deactivation_reason: deactivationNotice,
+        deactivation_reason: deactivationReasonText,
         user_story: userStory,
         account_tenure: accountTenure,
         current_rating: currentRating,
         completion_rate: completionRate,
         total_deliveries: totalDeliveries,
         appeal_tone: appealTone,
-        user_state: userState
+        user_state: userState,
+        evidence: evidenceText
       });
 
       // Save the generated letter and appeal ID
@@ -321,7 +525,7 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
 
   const canContinue = () => {
     if (currentStep === 1) return selectedPlatform !== '';
-    if (currentStep === 2) return deactivationNotice.trim() !== '';
+    if (currentStep === 2) return deactivationNotice.trim() !== '' || uploadedNoticeFile !== null;
     if (currentStep === 3) return true;
     return false;
   };
@@ -341,6 +545,110 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
     setGeneratedLetter('');
     setAppealId('');
     setError('');
+    setUploadedFiles([]);
+    setUploadedNoticeFile(null);
+  };
+
+  // Handle file upload for deactivation notice
+  const handleNoticeFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setError('');
+
+    try {
+      const file = files[0];
+      
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/heic', 'image/webp', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        setError('Please upload images (JPG, PNG) or PDF files only');
+        setIsUploading(false);
+        return;
+      }
+
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        setError('File size must be less than 10MB');
+        setIsUploading(false);
+        return;
+      }
+
+      // Upload file
+      const result = await uploadEvidence(file);
+      
+      // Set uploaded notice file
+      setUploadedNoticeFile({
+        url: result.url,
+        filename: result.filename,
+        contentType: result.contentType
+      });
+
+      // Clear file input
+      event.target.value = '';
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setError(err.message || 'Failed to upload file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Remove uploaded notice file
+  const removeNoticeFile = () => {
+    setUploadedNoticeFile(null);
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setError('');
+
+    try {
+      const file = files[0];
+      
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/heic', 'image/webp', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        setError('Please upload images (JPG, PNG) or PDF files only');
+        setIsUploading(false);
+        return;
+      }
+
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        setError('File size must be less than 10MB');
+        setIsUploading(false);
+        return;
+      }
+
+      // Upload file
+      const result = await uploadEvidence(file);
+      
+      // Add to uploaded files list
+      setUploadedFiles([...uploadedFiles, {
+        url: result.url,
+        filename: result.filename,
+        contentType: result.contentType
+      }]);
+
+      // Clear file input
+      event.target.value = '';
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setError(err.message || 'Failed to upload file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Remove uploaded file
+  const removeFile = (index: number) => {
+    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
   };
 
   return (
@@ -456,10 +764,81 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                 <Upload className="w-5 h-5" />
                 <span className="text-sm font-medium">Paste your notice or upload a file</span>
               </div>
+              
+              {/* File Upload Section */}
+              {!uploadedNoticeFile && (
+                <div className="mb-6">
+                  <label className="flex items-center justify-center gap-3 px-6 py-4 border-2 border-dashed border-blue-300 bg-blue-50 rounded-xl hover:border-blue-500 hover:bg-blue-100 transition-colors cursor-pointer">
+                    <input
+                      type="file"
+                      onChange={handleNoticeFileUpload}
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      disabled={isUploading}
+                    />
+                    {isUploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        <span className="text-blue-600 font-medium">Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 text-blue-600" />
+                        <span className="text-blue-700 font-medium">Upload deactivation notice (screenshot or PDF)</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+              )}
+
+              {/* Uploaded Notice File Display */}
+              {uploadedNoticeFile && (
+                <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {uploadedNoticeFile.contentType.startsWith('image/') ? (
+                        <Image className="w-6 h-6 text-green-600" />
+                      ) : (
+                        <FileText className="w-6 h-6 text-green-600" />
+                      )}
+                      <div>
+                        <p className="text-sm font-semibold text-green-900">Deactivation Notice Uploaded</p>
+                        <p className="text-xs text-green-700">{uploadedNoticeFile.filename}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeNoticeFile}
+                      className="p-2 hover:bg-red-100 rounded-full transition-colors"
+                    >
+                      <X className="w-5 h-5 text-red-600" />
+                    </button>
+                  </div>
+                  {uploadedNoticeFile.contentType.startsWith('image/') && (
+                    <div className="mt-3">
+                      <img 
+                        src={uploadedNoticeFile.url} 
+                        alt="Deactivation notice" 
+                        className="max-w-full h-auto rounded-lg border border-green-200"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Divider */}
+              {uploadedNoticeFile && (
+                <div className="flex items-center gap-3 my-6">
+                  <div className="flex-1 h-px bg-slate-200"></div>
+                  <span className="text-sm text-slate-500 font-medium">Or add more details below</span>
+                  <div className="flex-1 h-px bg-slate-200"></div>
+                </div>
+              )}
+
               <textarea
                 value={deactivationNotice}
                 onChange={(e) => setDeactivationNotice(e.target.value)}
-                placeholder="Paste your deactivation notice here..."
+                placeholder="Paste your deactivation notice here, or add additional context..."
                 className="w-full h-80 p-6 border-2 border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-slate-700 placeholder:text-slate-400 bg-white shadow-inner"
               />
             </div>
@@ -597,6 +976,62 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                   placeholder="Describe any evidence: screenshots, dashcam footage, messages with customers, GPS records, etc."
                   className="w-full h-32 px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-slate-700 placeholder:text-slate-400"
                 />
+              </div>
+
+              {/* File Upload Section */}
+              <div className="mt-6">
+                <label className="block text-sm font-semibold text-slate-700 mb-3">Upload Evidence Files</label>
+                <p className="text-sm text-slate-600 mb-4">Upload screenshots, photos, or documents that support your appeal (max 10MB per file)</p>
+                
+                {/* Upload Button */}
+                <label className="flex items-center justify-center gap-3 px-6 py-4 border-2 border-dashed border-slate-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer">
+                  <input
+                    type="file"
+                    onChange={handleFileUpload}
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    disabled={isUploading}
+                  />
+                  {isUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                      <span className="text-blue-600 font-medium">Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5 text-slate-600" />
+                      <span className="text-slate-700 font-medium">Click to upload image or PDF</span>
+                    </>
+                  )}
+                </label>
+
+                {/* Uploaded Files List */}
+                {uploadedFiles.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {uploadedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          {file.contentType.startsWith('image/') ? (
+                            <Image className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <FileText className="w-5 h-5 text-green-600" />
+                          )}
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">{file.filename}</p>
+                            <p className="text-xs text-slate-500">Uploaded successfully</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="p-1 hover:bg-red-100 rounded-full transition-colors"
+                        >
+                          <X className="w-4 h-4 text-red-600" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -767,7 +1202,7 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4 justify-end mb-6">
+            <div className="flex gap-4 justify-end mb-6 flex-wrap">
               <button 
                 onClick={copyToClipboard}
                 className="flex items-center gap-2 px-5 py-2.5 border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition-colors font-medium text-slate-700"
@@ -775,8 +1210,22 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                Copy to Clipboard
+                Copy Full Letter
               </button>
+              
+              {/* Show condensed copy button for Uber/Lyft (web forms) */}
+              {(selectedPlatform === 'uber' || selectedPlatform === 'lyft') && (
+                <button 
+                  onClick={copyCondensedVersion}
+                  className="flex items-center gap-2 px-5 py-2.5 border-2 border-amber-400 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors font-medium text-amber-900"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Copy for Web Form
+                </button>
+              )}
+              
               <button 
                 onClick={downloadPDF}
                 className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg"
@@ -933,46 +1382,105 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
               )}
             </div>
 
-            {/* Next Steps */}
+            {/* Submission Instructions */}
             <div className="bg-slate-50 rounded-2xl border-2 border-slate-200 p-8 mb-8">
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Next Steps</h3>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">1</div>
-                  <p className="text-slate-700">Download as PDF or copy to clipboard using the buttons above</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">2</div>
-                  <p className="text-slate-700">Fill in the [bracketed] sections with your personal information</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">3</div>
-                  <div className="text-slate-700">
-                    <p className="mb-1">Submit via {getPlatformName()}'s official appeal channel:</p>
-                    <div className="ml-4 text-sm text-blue-600 font-medium">
-                      {selectedPlatform === 'doordash' && '→ help.doordash.com/dashers → Account → Appeal Deactivation'}
-                      {selectedPlatform === 'uber' && '→ help.uber.com → Account → Deactivated Account'}
-                      {selectedPlatform === 'lyft' && '→ help.lyft.com/hc → Driver Account → Appeal'}
-                      {selectedPlatform === 'instacart' && '→ shoppers.instacart.com → Support → Account Status'}
-                      {selectedPlatform === 'amazonflex' && '→ flex.amazon.com → Support → Account Issue'}
-                      {selectedPlatform === 'shipt' && '→ shoppers.shipt.com → Support → Account Appeal'}
-                      {!selectedPlatform && '→ Check your platform\'s help center'}
+              {(() => {
+                const instructions = getSubmissionInstructions();
+                return (
+                  <>
+                    <div className="flex items-center gap-3 mb-6">
+                      <h3 className="text-xl font-bold text-slate-900">How to Submit Your Appeal</h3>
+                      {instructions.method === 'Email' ? (
+                        <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">📧 Email Submission</span>
+                      ) : (
+                        <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-3 py-1 rounded-full">🌐 Web Form</span>
+                      )}
+                      {instructions.deadline && (
+                        <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                          instructions.deadline.includes('10 days') 
+                            ? 'bg-red-100 text-red-800' 
+                            : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          ⏰ {instructions.deadline}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">4</div>
-                  <p className="text-slate-700">Keep copies of your submission for your records</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">5</div>
-                  <p className="text-slate-700">Follow up if you don't hear back within 7 business days</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="bg-amber-500 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">!</div>
-                  <p className="text-slate-700"><span className="font-semibold">Pro tip:</span> Some platforms respond faster via Twitter/X. Tag them publicly if your appeal is urgent.</p>
-                </div>
-              </div>
+
+                    {/* Contact Information */}
+                    {instructions.method === 'Email' && instructions.contact && (
+                      <div className="bg-white rounded-lg p-4 mb-6 border-2 border-blue-200">
+                        <p className="text-sm text-slate-600 mb-1">Email your appeal to:</p>
+                        <p className="text-lg font-bold text-blue-600">{instructions.contact}</p>
+                        {instructions.url && (
+                          <p className="text-sm text-slate-500 mt-1">Support portal: {instructions.url}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {instructions.method === 'Web Form' && instructions.url && (
+                      <div className="bg-white rounded-lg p-4 mb-6 border-2 border-purple-200">
+                        <p className="text-sm text-slate-600 mb-1">Submit through web form at:</p>
+                        <p className="text-lg font-bold text-purple-600 break-all">{instructions.url}</p>
+                        {instructions.contact && (
+                          <p className="text-sm text-slate-500 mt-1">Navigate to: {instructions.contact}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Step-by-Step Instructions */}
+                    <div className="space-y-3">
+                      {instructions.steps.map((step: string, index: number) => (
+                        <div key={index} className="flex items-start gap-3">
+                          <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-semibold text-sm">
+                            {index + 1}
+                          </div>
+                          <p className="text-slate-700">{step}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Format Guidance */}
+                    {instructions.format && (
+                      <div className="mt-6 bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <p className="text-sm font-semibold text-blue-900 mb-1">📝 Format Guidance:</p>
+                        <p className="text-sm text-blue-800">{instructions.format}</p>
+                      </div>
+                    )}
+
+                    {/* Uber-Specific Form Questions */}
+                    {selectedPlatform === 'uber' && (
+                      <div className="mt-6 bg-purple-50 rounded-lg p-4 border-2 border-purple-300">
+                        <p className="text-sm font-bold text-purple-900 mb-3">📋 Uber's 3 Appeal Questions:</p>
+                        <div className="space-y-3 text-sm">
+                          <div className="bg-white rounded p-3 border border-purple-200">
+                            <p className="font-semibold text-purple-900 mb-1">Question 1:</p>
+                            <p className="text-slate-700 italic">"Please provide information outlining why you believe your account should be reviewed"</p>
+                            <p className="text-purple-800 mt-2 text-xs">→ Paste: Opening + What Happened sections</p>
+                          </div>
+                          <div className="bg-white rounded p-3 border border-purple-200">
+                            <p className="font-semibold text-purple-900 mb-1">Question 2:</p>
+                            <p className="text-slate-700 italic">"Can you tell us why the actions were justified and did not constitute abuse?"</p>
+                            <p className="text-purple-800 mt-2 text-xs">→ Paste: Your explanation + Evidence section</p>
+                          </div>
+                          <div className="bg-white rounded p-3 border border-purple-200">
+                            <p className="font-semibold text-purple-900 mb-1">Question 3:</p>
+                            <p className="text-slate-700 italic">"Would you like to provide further clarification?"</p>
+                            <p className="text-purple-800 mt-2 text-xs">→ Paste: Requests + State protections + Closing</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Deadline Warning */}
+                    {instructions.deadline && instructions.deadline.includes('10 days') && (
+                      <div className="mt-6 bg-red-50 rounded-lg p-4 border-2 border-red-300">
+                        <p className="text-sm font-bold text-red-900 mb-1">⚠️ URGENT DEADLINE:</p>
+                        <p className="text-sm text-red-800">Amazon Flex has a STRICT {instructions.deadline} deadline. Submit immediately!</p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {/* Bottom Buttons */}
