@@ -3,7 +3,7 @@
 
 import os
 import firebase_admin
-from firebase_admin import credentials, auth, firestore
+from firebase_admin import credentials, auth, firestore, storage
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,6 +29,7 @@ def initialize_firebase():
         
         firebase_admin.initialize_app(cred, {
             'projectId': os.getenv("FIREBASE_PROJECT_ID"),
+            'storageBucket': 'gigshield-22319.firebasestorage.app'
         })
         
         print("✓ Firebase initialized successfully")
@@ -38,6 +39,9 @@ initialize_firebase()
 
 # Firestore client
 db = firestore.client()
+
+# Storage bucket
+bucket = storage.bucket()
 
 # Helper Functions
 async def verify_token(id_token: str) -> dict:
@@ -105,3 +109,25 @@ async def delete_appeal(appeal_id: str, user_id: str) -> bool:
     appeal_ref.delete()
     print(f"✓ Appeal deleted: {appeal_id}")
     return True
+
+async def upload_evidence_file(file_bytes: bytes, filename: str, user_id: str, content_type: str) -> str:
+    """
+    Upload evidence file to Firebase Storage
+    Returns: Public download URL
+    """
+    from datetime import datetime
+    import uuid
+    
+    # Generate unique filename
+    file_extension = filename.split('.')[-1] if '.' in filename else 'jpg'
+    unique_filename = f"evidence/{user_id}/{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}.{file_extension}"
+    
+    # Upload to Firebase Storage
+    blob = bucket.blob(unique_filename)
+    blob.upload_from_string(file_bytes, content_type=content_type)
+    
+    # Make publicly accessible
+    blob.make_public()
+    
+    print(f"✓ File uploaded: {unique_filename}")
+    return blob.public_url

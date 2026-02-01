@@ -1,6 +1,6 @@
 # backend/app/api/appeals.py
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Form
 from app.models.schemas import (
     NoticeAnalyzeRequest,
     NoticeAnalyzeResponse,
@@ -9,7 +9,7 @@ from app.models.schemas import (
     ChatResponse
 )
 from app.core.auth_middleware import get_current_user
-from app.core.firebase import save_appeal, get_user_appeals, delete_appeal, get_user_data
+from app.core.firebase import save_appeal, get_user_appeals, delete_appeal, get_user_data, upload_evidence_file
 from app.services.ai_service import ai_service
 from app.services.knowledge_base import knowledge_base_service
 from typing import Optional
@@ -311,4 +311,61 @@ async def get_platforms():
             "platforms": knowledge_base_service.get_all_platforms()
         }
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/upload-evidence")
+async def upload_evidence(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Upload evidence file (image, PDF, document) to Firebase Storage.
+    Returns public download URL.
+    """
+    try:
+        # Validate file type
+        allowed_types = [
+            'image/jpeg', 'image/png', 'image/jpg', 'image/heic', 'image/webp',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ]
+        
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File type {file.content_type} not allowed. Allowed: images, PDF, Word docs"
+            )
+        
+        # Validate file size (max 10MB)
+        file_bytes = await file.read()
+        max_size = 10 * 1024 * 1024  # 10MB
+        if len(file_bytes) > max_size:
+            raise HTTPException(
+                status_code=400,
+                detail="File too large. Maximum size is 10MB"
+            )
+        
+        # Upload to Firebase Storage
+        download_url = await upload_evidence_file(
+            file_bytes=file_bytes,
+            filename=file.filename,
+            user_id=current_user['uid'],
+            content_type=file.content_type
+        )
+        
+        print(f"✓ Evidence uploaded for user: {current_user['email']}")
+        
+        return {
+            "success": True,
+            "url": download_url,
+            "filename": file.filename,
+            "contentType": file.content_type
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error uploading evidence: {e}")
         raise HTTPException(status_code=500, detail=str(e))

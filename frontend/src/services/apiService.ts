@@ -63,6 +63,7 @@ export interface AppealData {
   total_deliveries?: string;
   appeal_tone?: string;
   user_state?: string;
+  evidence?: string;
 }
 
 export interface AppealResult {
@@ -232,5 +233,31 @@ export const chatWithBot = async (
  */
 export const checkHealth = async () => {
   const response = await fetch(`${API_BASE_URL}/api/health`);
+  return await response.json();
+};
+
+/**
+ * Upload evidence file (image, PDF, document)
+ */
+export const uploadEvidence = async (file: File): Promise<{ url: string; filename: string; contentType: string }> => {
+  const token = await getAuthToken();
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await fetch(`${API_BASE_URL}/api/upload-evidence`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+      // Don't set Content-Type - browser will set it with boundary for multipart/form-data
+    },
+    body: formData
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to upload file');
+  }
+  
   return await response.json();
 };
