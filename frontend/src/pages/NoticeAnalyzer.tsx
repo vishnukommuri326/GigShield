@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { Upload, AlertCircle, CheckCircle, XCircle, AlertTriangle, Info, TrendingUp, ArrowRight, Sparkles, FileText, Shield, Clock } from 'lucide-react';
 import { analyzeNotice as analyzeNoticeAPI } from '../services/apiService';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url';
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface NoticeAnalyzerProps {
   onNavigate: (page: string) => void;
+  onAnalysisComplete?: (data: any) => void;
 }
 
 interface AnalysisResult {
@@ -19,16 +25,20 @@ interface AnalysisResult {
   extracted: boolean;
 }
 
-const NoticeAnalyzer = ({ onNavigate }: NoticeAnalyzerProps) => {
+const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps) => {
   const [noticeText, setNoticeText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string>('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string>('');
+  const [isExtracting, setIsExtracting] = useState(false);
 
   // Real API call to backend
-  const analyzeNotice = async () => {
-    if (!noticeText.trim()) {
-      setError('Please enter your notice text');
+  const analyzeNotice = async (textToAnalyze?: string) => {
+    const text = textToAnalyze || noticeText;
+    if (!text.trim() && !uploadedFile) {
+      setError('Please upload a file or enter your notice text');
       return;
     }
 
@@ -37,7 +47,7 @@ const NoticeAnalyzer = ({ onNavigate }: NoticeAnalyzerProps) => {
     
     try {
       // Call real backend API
-      const result = await analyzeNoticeAPI(noticeText);
+      const result = await analyzeNoticeAPI(text);
       
       // Map API response to our component state
       const mappedResult: AnalysisResult = {
@@ -105,6 +115,87 @@ const NoticeAnalyzer = ({ onNavigate }: NoticeAnalyzerProps) => {
   const urgency = analysisResult ? getUrgencyLevel(analysisResult.daysRemaining) : null;
   const riskInfo = analysisResult ? getRiskLevelInfo(analysisResult.riskLevel) : null;
 
+  // Handle file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/heic', 'image/webp', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please upload an image (JPG, PNG) or PDF file');
+      return;
+    }
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB');
+      return;
+    }
+
+    setUploadedFile(file);
+    setError('');
+
+    // Create preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFilePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
+      setFilePreview('');
+      // Try to extract text from PDF
+      await extractPDFText(file);
+    }
+  };
+
+  // Extract text from PDF
+  const extractPDFText = async (file: File) => {
+    setIsExtracting(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      
+      let fullText = '';
+      
+      // Extract text from all pages
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        fullText += pageText + '\n';
+      }
+      
+      // Set extracted text
+      const extractedText = fullText.trim();
+      if (!extractedText) {
+        setError('PDF appears to be empty or contains only images. Please paste the text manually.');
+        return;
+      }
+      
+      console.log('PDF text extracted successfully, length:', extractedText.length);
+      
+      // Automatically analyze the extracted text (without showing it in the textarea)
+      await analyzeNotice(extractedText);
+    } catch (err: any) {
+      console.error('PDF extraction error:', err);
+      console.error('Error details:', err?.message, err?.name);
+      setError(`Failed to extract text from PDF: ${err?.message || 'Unknown error'}. Please paste the text manually.`);
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  // Clear uploaded file
+  const clearFile = () => {
+    setUploadedFile(null);
+    setFilePreview('');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
       <div className="max-w-7xl mx-auto">
@@ -120,18 +211,71 @@ const NoticeAnalyzer = ({ onNavigate }: NoticeAnalyzerProps) => {
 
         {/* Upload Section */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-          <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center hover:border-[#0d9488] transition-colors cursor-pointer">
-            <Upload className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-700 mb-2">
-              Upload Your Deactivation Notice
-            </h3>
-            <p className="text-slate-500 mb-4">
-              Drop your PDF, image, or screenshot here, or click to browse
-            </p>
-            <button className="px-6 py-3 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors">
-              Choose File
-            </button>
-          </div>
+          {!uploadedFile ? (
+            <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center hover:border-[#0d9488] transition-colors">
+              <Upload className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-slate-700 mb-2">
+                Upload Your Deactivation Notice
+              </h3>
+              <p className="text-slate-500 mb-4">
+                Drop your PDF, image, or screenshot here, or click to browse
+              </p>
+              <label className="inline-block px-6 py-3 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors cursor-pointer">
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  accept="image/*,.pdf"
+                  className="hidden"
+                />
+                Choose File
+              </label>
+            </div>
+          ) : (
+            <div className="border-2 border-green-300 bg-green-50 rounded-xl p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <div>
+                    <p className="font-semibold text-green-900">File Uploaded</p>
+                    <p className="text-sm text-green-700">{uploadedFile.name}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={clearFile}
+                  className="px-4 py-2 text-sm bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+              {filePreview && (
+                <div className="mt-4">
+                  <img 
+                    src={filePreview} 
+                    alt="Deactivation notice preview" 
+                    className="max-w-full h-auto rounded-lg border-2 border-green-200"
+                  />
+                </div>
+              )}
+              {uploadedFile.type === 'application/pdf' && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+                  <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-800">
+                    {isExtracting ? (
+                      <>
+                        <p className="font-medium mb-1">Extracting Text from PDF...</p>
+                        <p>Please wait while we read your PDF file.</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-medium mb-1">PDF Text Extracted Successfully</p>
+                        <p>Text has been automatically extracted. Click "Analyze Notice" to continue.</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Or Paste Text */}
           <div className="mt-6">
@@ -158,8 +302,8 @@ const NoticeAnalyzer = ({ onNavigate }: NoticeAnalyzerProps) => {
           )}
 
           <button 
-            onClick={analyzeNotice}
-            disabled={!noticeText.trim() || isAnalyzing}
+            onClick={() => analyzeNotice()}
+            disabled={(!noticeText.trim() && !uploadedFile) || isAnalyzing}
             className="mt-4 w-full py-4 bg-gradient-to-r from-[#1e3a5f] to-[#0d9488] text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isAnalyzing ? (
@@ -331,7 +475,18 @@ const NoticeAnalyzer = ({ onNavigate }: NoticeAnalyzerProps) => {
             {/* Action Buttons */}
             <div className="flex gap-4">
               <button
-                onClick={() => onNavigate('wizard')}
+                onClick={() => {
+                  if (onAnalysisComplete && analysisResult) {
+                    onAnalysisComplete({
+                      platform: analysisResult.platform,
+                      deactivationNotice: noticeText,
+                      currentStep: 3,
+                      reason: analysisResult.reason,
+                      missingInfo: analysisResult.missingInfo
+                    });
+                  }
+                  onNavigate('wizard');
+                }}
                 className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
               >
                 Generate Appeal Letter

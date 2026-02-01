@@ -6,6 +6,13 @@ import jsPDF from 'jspdf';
 
 interface AppealWizardProps {
   onNavigate: (page: string) => void;
+  prefilledData?: {
+    platform?: string;
+    deactivationNotice?: string;
+    currentStep?: number;
+    reason?: string;
+    missingInfo?: string[];
+  };
 }
 
 interface Platform {
@@ -22,8 +29,8 @@ interface UploadedFile {
   contentType: string;
 }
 
-const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
-  const [currentStep, setCurrentStep] = useState(1);
+const AppealWizard = ({ onNavigate, prefilledData }: AppealWizardProps) => {
+  const [currentStep, setCurrentStep] = useState(prefilledData?.currentStep || 1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedLetter, setGeneratedLetter] = useState('');
   const [appealId, setAppealId] = useState('');
@@ -33,17 +40,21 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
   const [isUploading, setIsUploading] = useState(false);
   
   // Step 1: Platform Selection
-  const [selectedPlatform, setSelectedPlatform] = useState<string>('');
+  const [selectedPlatform, setSelectedPlatform] = useState<string>(prefilledData?.platform || '');
   
   // Step 2: Deactivation Notice
-  const [deactivationNotice, setDeactivationNotice] = useState('');
+  const [deactivationNotice, setDeactivationNotice] = useState(prefilledData?.deactivationNotice || '');
   
   // Step 3: Account Details
   const [accountTenure, setAccountTenure] = useState('');
   const [currentRating, setCurrentRating] = useState('');
   const [completionRate, setCompletionRate] = useState('');
   const [totalDeliveries, setTotalDeliveries] = useState('');
-  const [userStory, setUserStory] = useState('');
+  const [userStory, setUserStory] = useState(
+    prefilledData?.reason 
+      ? `I was deactivated for: "${prefilledData.reason}"\n\nI believe this decision is incorrect because: [Explain why you disagree with this reason - add specific details about what actually happened]\n\n${prefilledData.missingInfo && prefilledData.missingInfo.length > 0 ? `The platform has not provided critical information:\n${prefilledData.missingInfo.map(info => `• ${info}`).join('\n')}\n\nI am requesting this information to properly defend myself.\n\n` : ''}[Add any other relevant context about your situation]` 
+      : ''
+  );
   const [evidence, setEvidence] = useState('');
   const [userState, setUserState] = useState('');
   const [appealTone, setAppealTone] = useState('professional');

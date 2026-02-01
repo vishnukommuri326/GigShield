@@ -11,6 +11,7 @@ import AppealTracker from './pages/AppealTracker';
 import EvidenceOrganizer from './pages/EvidenceOrganizer';
 import RightsChatbot from './pages/RightsChatbot';
 import KnowledgeBase from './pages/KnowledgeBase';
+import Rights from './pages/Rights';
 import Account from './pages/Account';
 import { useAuth } from './hooks/useAuths';
 import { logout as firebaseLogout } from './services/authService';
@@ -19,6 +20,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState('login');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { user, loading } = useAuth();
+  const [analyzerData, setAnalyzerData] = useState<any>(null);
 
   // Always logout when app mounts (fresh page load or browser open)
   useEffect(() => {
@@ -68,10 +70,10 @@ function App() {
       case 'dashboard':
         return <Dashboard onNavigate={setCurrentPage} />;
       case 'wizard':
-        return <AppealWizard onNavigate={setCurrentPage} />;
+        return <AppealWizard onNavigate={setCurrentPage} prefilledData={analyzerData} />;
       case 'analyzer':
       case 'notice-analyzer':
-        return <NoticeAnalyzer onNavigate={setCurrentPage} />;
+        return <NoticeAnalyzer onNavigate={setCurrentPage} onAnalysisComplete={setAnalyzerData} />;
       case 'tracker':
       case 'appeal-tracker':
         return <AppealTracker onNavigate={setCurrentPage} />;
@@ -84,6 +86,8 @@ function App() {
       case 'knowledge':
       case 'knowledge-base':
         return <KnowledgeBase onNavigate={setCurrentPage} />;
+      case 'rights':
+        return <Rights onNavigate={setCurrentPage} />;
       case 'account':
         return <Account onNavigate={setCurrentPage} />;
       default:

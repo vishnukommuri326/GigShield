@@ -125,9 +125,12 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
             <a href="#platforms" className="text-slate-600 hover:text-slate-900 transition-colors">
               Platforms
             </a>
-            <a href="#rights" className="text-slate-600 hover:text-slate-900 transition-colors">
+            <button 
+              onClick={() => onNavigate('rights')}
+              className="text-slate-600 hover:text-slate-900 transition-colors"
+            >
               Know Your Rights
-            </a>
+            </button>
           </nav>
           <div className="flex items-center gap-4">
             {user ? (
