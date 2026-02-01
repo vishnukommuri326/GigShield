@@ -467,14 +467,30 @@ const AppealWizard = ({ onNavigate }: AppealWizardProps) => {
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                 >
                   <option value="">Select your state...</option>
+                  <option value="Arizona">Arizona</option>
                   <option value="California">California</option>
-                  <option value="New York">New York</option>
-                  <option value="Washington">Washington</option>
-                  <option value="Texas">Texas</option>
+                  <option value="Colorado">Colorado</option>
+                  <option value="Connecticut">Connecticut</option>
                   <option value="Florida">Florida</option>
+                  <option value="Georgia">Georgia</option>
                   <option value="Illinois">Illinois</option>
+                  <option value="Maryland">Maryland</option>
+                  <option value="Massachusetts">Massachusetts</option>
+                  <option value="Michigan">Michigan</option>
+                  <option value="Minnesota">Minnesota</option>
+                  <option value="Nevada">Nevada</option>
                   <option value="New Jersey">New Jersey</option>
-                  <option value="Other">Other</option>
+                  <option value="New York">New York</option>
+                  <option value="North Carolina">North Carolina</option>
+                  <option value="Oregon">Oregon</option>
+                  <option value="Pennsylvania">Pennsylvania</option>
+                  <option value="Rhode Island">Rhode Island</option>
+                  <option value="Texas">Texas</option>
+                  <option value="Vermont">Vermont</option>
+                  <option value="Virginia">Virginia</option>
+                  <option value="Washington">Washington</option>
+                  <option value="Wisconsin">Wisconsin</option>
+                  <option value="Other">Other State</option>
                 </select>
                 <p className="text-sm text-slate-500 mt-2">Some states have specific gig worker protections we'll reference</p>
               </div>
