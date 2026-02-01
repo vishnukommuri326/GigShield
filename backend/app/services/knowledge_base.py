@@ -74,16 +74,20 @@ class KnowledgeBaseService:
                 # Generate embedding
                 embedding = self.encoder.encode(text).tolist()
                 
-                # Prepare metadata
+                # Prepare metadata (filter out None values - Pinecone doesn't accept null)
                 metadata = {
                     'id': doc['id'],
                     'title': doc['title'],
                     'category': doc['category'],
-                    'state': doc['state'],
-                    'platform': doc['platform'],
                     'content_preview': doc['content'][:500],  # First 500 chars
                     'tags': ','.join(doc['tags'])
                 }
+                
+                # Add optional fields only if they have values
+                if doc['state']:
+                    metadata['state'] = doc['state']
+                if doc['platform']:
+                    metadata['platform'] = doc['platform']
                 
                 vectors.append({
                     'id': doc['id'],

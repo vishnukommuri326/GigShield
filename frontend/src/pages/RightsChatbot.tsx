@@ -19,7 +19,7 @@ const RightsChatbot = ({ onNavigate }: RightsChatbotProps) => {
     {
       id: 1,
       type: 'bot',
-      text: "👋 Hi! I'm your GigShield Rights Assistant powered by AI and our comprehensive knowledge base.\n\nI can help answer questions about:\n• Your deactivation rights in any state (Texas, California, Florida, Illinois, Massachusetts, Colorado, Oregon, Washington, New York, and more)\n• Platform-specific policies and appeal processes (Uber, DoorDash, Lyft, Instacart, Amazon Flex)\n• Evidence you need for appeals\n• Deadlines and next steps\n• State-specific labor laws and protections\n\nWhat would you like to know?",
+      text: "👋 Hi! I'm your GigShield Rights Assistant powered by AI and our comprehensive knowledge base.\n\nI can help answer questions about:\n• Your deactivation rights in 24 states (AZ, CA, CO, CT, FL, GA, IL, MD, MA, MI, MN, NV, NJ, NY, NC, OR, PA, RI, TX, VT, VA, WA, WI)\n• Platform-specific policies and appeal processes (Uber, DoorDash, Lyft, Instacart, Amazon Flex, Grubhub, Shipt)\n• Evidence you need for appeals\n• Deadlines and next steps\n• State-specific labor laws and protections\n\nWhat would you like to know?",
       timestamp: new Date().toLocaleTimeString(),
     }
   ]);
@@ -148,7 +148,7 @@ const RightsChatbot = ({ onNavigate }: RightsChatbotProps) => {
             Rights Chatbot
           </h1>
           <p className="text-lg text-slate-600">
-            AI-powered assistant with knowledge of gig worker laws across 10 states
+            AI-powered assistant with knowledge of gig worker laws across 24 states
           </p>
         </div>
 
