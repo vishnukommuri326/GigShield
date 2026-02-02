@@ -112,7 +112,7 @@ function App() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0d9488] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#d4af37] mx-auto mb-4"></div>
           <p className="text-slate-600">Loading...</p>
         </div>
       </div>
@@ -125,7 +125,7 @@ function App() {
       {showSidebar && (
         <button
           onClick={() => setIsSidebarOpen(true)}
-          className="fixed top-6 left-6 z-[100] p-3 bg-[#1e3a5f] text-white rounded-lg shadow-lg hover:bg-[#1e3a5f]/90 transition-all hover:scale-110"
+          className="fixed top-6 left-6 z-[100] p-3 bg-[#0f172a] text-white rounded-lg shadow-lg hover:bg-[#0f172a]/90 transition-all hover:scale-110"
           aria-label="Open menu"
         >
           <Menu className="w-6 h-6" />

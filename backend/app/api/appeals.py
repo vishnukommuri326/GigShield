@@ -1,6 +1,7 @@
 # backend/app/api/appeals.py
 
 from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Form
+import time
 from app.models.schemas import (
     NoticeAnalyzeRequest,
     NoticeAnalyzeResponse,
@@ -40,9 +41,6 @@ async def health_check():
         "pinecone_configured": pinecone_configured
     }
 
-# ============================================
-# PROTECTED ENDPOINTS (Auth Required)
-# ============================================
 
 @router.post("/analyze-notice", response_model=NoticeAnalyzeResponse)
 async def analyze_notice(
@@ -54,12 +52,12 @@ async def analyze_notice(
     Requires authentication.
     """
     try:
-        print(f"✓ Analyzing notice for user: {current_user['email']}")
+        print(f" Analyzing notice for user: {current_user['email']}")
         
         # Use AI service to analyze notice
         result = await ai_service.analyze_notice(request.notice_text)
         
-        print(f"✓ AI Analysis complete: Platform={result.get('platform')}, Reason={result.get('reason')}")
+        print(f"AI Analysis complete: Platform={result.get('platform')}, Reason={result.get('reason')}")
         
         # Convert to response model
         return NoticeAnalyzeResponse(
@@ -73,7 +71,7 @@ async def analyze_notice(
         )
         
     except Exception as e:
-        print(f"❌ Error analyzing notice: {e}")
+        print(f"Error analyzing notice: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -88,7 +86,7 @@ async def generate_appeal(
     Saves the appeal to Firestore.
     """
     try:
-        print(f"✓ Generating appeal for user: {current_user['email']}")
+        print(f" Generating appeal for user: {current_user['email']}")
         
         # Fetch user data from Firestore for contact info
         user_data = await get_user_data(current_user['uid'])
@@ -116,7 +114,7 @@ async def generate_appeal(
             top_k=3
         )
         
-        print(f"✓ Retrieved {len(knowledge_context)} chars of knowledge context")
+        print(f"Retrieved {len(knowledge_context)} chars of knowledge context")
         
         # Prepare account details
         account_details = {
@@ -138,7 +136,7 @@ async def generate_appeal(
             knowledge_context=knowledge_context
         )
         
-        print(f"✓ AI-generated letter ({len(letter)} chars)")
+        print(f" AI-generated letter ({len(letter)} chars)")
         
         # Save appeal to Firestore
         from datetime import datetime, timedelta
@@ -164,7 +162,7 @@ async def generate_appeal(
         
         appeal_id = await save_appeal(current_user['uid'], appeal_data)
         
-        print(f"✓ Appeal saved to Firestore: {appeal_id}")
+        print(f"Appeal saved to Firestore: {appeal_id}")
         
         return {
             "appeal_id": appeal_id,
@@ -175,7 +173,7 @@ async def generate_appeal(
         }
         
     except Exception as e:
-        print(f"❌ Error generating appeal: {e}")
+        print(f" Error generating appeal: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -324,25 +322,47 @@ async def get_platforms():
 @router.post("/upload-evidence")
 async def upload_evidence(
     file: UploadFile = File(...),
+    case_id: str = Form(None),  # Make optional
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Upload evidence file (image, PDF, document) to Firebase Storage.
-    Returns public download URL.
+    Upload evidence file (images and PDFs only) to Firebase Storage.
+    SECURITY: Files are stored privately and require authentication to access.
+    WARNING: Do not upload sensitive personal documents. This tool is experimental.
+    
+    If case_id is provided, file is attached to that case.
+    If case_id is None, file is uploaded to temporary storage for the user.
     """
+    print(f"[DEBUG] Upload request received:")
+    print(f"  - File: {file.filename if file else 'MISSING'}")
+    print(f"  - Content-Type: {file.content_type if file else 'MISSING'}")
+    print(f"  - Case ID: {case_id if case_id else 'NONE (temporary upload)'}")
+    print(f"  - User: {current_user.get('email', 'UNKNOWN')}")
+    
     try:
-        # Validate file type
+        # If case_id is provided, verify it exists and belongs to user
+        if case_id:
+            from app.core.firebase import db
+            case_ref = db.collection('appeals').document(case_id)
+            case_doc = case_ref.get()
+            
+            if not case_doc.exists:
+                raise HTTPException(status_code=404, detail="Case not found")
+            
+            case_data = case_doc.to_dict()
+            if case_data.get('userId') != current_user['uid']:
+                raise HTTPException(status_code=403, detail="Not authorized to upload evidence for this case")
+        
+        # Validate file type - STRICT: Images and PDFs only
         allowed_types = [
-            'image/jpeg', 'image/png', 'image/jpg', 'image/heic', 'image/webp',
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            'image/jpeg', 'image/png', 'image/jpg', 'image/webp',
+            'application/pdf'
         ]
         
         if file.content_type not in allowed_types:
             raise HTTPException(
                 status_code=400,
-                detail=f"File type {file.content_type} not allowed. Allowed: images, PDF, Word docs"
+                detail=f"File type not allowed. Only images (JPEG, PNG, WebP) and PDFs are accepted."
             )
         
         # Validate file size (max 10MB)
@@ -354,27 +374,173 @@ async def upload_evidence(
                 detail="File too large. Maximum size is 10MB"
             )
         
-        # Upload to Firebase Storage
-        download_url = await upload_evidence_file(
+        # Upload to Firebase Storage (private)
+        from app.core.firebase import upload_evidence_file, save_evidence_metadata
+        
+        # Use temporary case_id if not provided
+        temp_case_id = case_id or f"temp_{current_user['uid']}_{int(time.time())}"
+        
+        file_metadata = await upload_evidence_file(
             file_bytes=file_bytes,
             filename=file.filename,
             user_id=current_user['uid'],
+            case_id=temp_case_id,
             content_type=file.content_type
         )
         
-        print(f"✓ Evidence uploaded for user: {current_user['email']}")
+        # Only save metadata to Firestore if case_id is provided
+        evidence_id = None
+        if case_id:
+            evidence_id = await save_evidence_metadata(
+                user_id=current_user['uid'],
+                case_id=case_id,
+                metadata=file_metadata
+            )
+        
+        print(f"✓ Evidence uploaded for user: {current_user['email']}, case: {temp_case_id}")
         
         return {
             "success": True,
-            "url": download_url,
+            "evidenceId": evidence_id,
             "filename": file.filename,
-            "contentType": file.content_type
+            "contentType": file.content_type,
+            "size": len(file_bytes),
+            "url": file_metadata.get('storagePath'),  # Return storage path
+            "message": "Evidence uploaded successfully. File is stored privately and requires authentication to access."
         }
         
     except HTTPException:
         raise
     except Exception as e:
         print(f"❌ Error uploading evidence: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cases/{case_id}/evidence")
+async def get_case_evidence_list(
+    case_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get all evidence for a specific case.
+    Returns metadata only (not download URLs).
+    """
+    try:
+        from app.core.firebase import get_case_evidence, db
+        
+        # Verify case belongs to user
+        case_ref = db.collection('appeals').document(case_id)
+        case_doc = case_ref.get()
+        
+        if not case_doc.exists:
+            raise HTTPException(status_code=404, detail="Case not found")
+        
+        case_data = case_doc.to_dict()
+        if case_data.get('userId') != current_user['uid']:
+            raise HTTPException(status_code=403, detail="Not authorized to view this case")
+        
+        # Get evidence
+        evidence_list = await get_case_evidence(case_id, current_user['uid'])
+        
+        return {
+            "caseId": case_id,
+            "evidence": evidence_list,
+            "count": len(evidence_list)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error fetching evidence: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/evidence/{evidence_id}/download")
+async def download_evidence(
+    evidence_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get time-limited download URL for evidence file.
+    URL expires after 1 hour.
+    """
+    try:
+        from app.core.firebase import db, get_evidence_download_url
+        
+        # Get evidence metadata
+        evidence_ref = db.collection('evidence').document(evidence_id)
+        evidence_doc = evidence_ref.get()
+        
+        if not evidence_doc.exists:
+            raise HTTPException(status_code=404, detail="Evidence not found")
+        
+        evidence_data = evidence_doc.to_dict()
+        
+        # Verify ownership
+        if evidence_data.get('userId') != current_user['uid']:
+            raise HTTPException(status_code=403, detail="Not authorized to download this evidence")
+        
+        # Generate signed URL
+        storage_path = evidence_data.get('storagePath')
+        download_url = await get_evidence_download_url(storage_path, current_user['uid'])
+        
+        return {
+            "evidenceId": evidence_id,
+            "downloadUrl": download_url,
+            "filename": evidence_data.get('filename'),
+            "expiresIn": "1 hour"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error generating download URL: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/evidence/{evidence_id}")
+async def delete_evidence_endpoint(
+    evidence_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Delete evidence file and metadata.
+    Only the user who uploaded can delete.
+    """
+    try:
+        from app.core.firebase import db, delete_evidence_file, delete_evidence_metadata
+        
+        # Get evidence metadata
+        evidence_ref = db.collection('evidence').document(evidence_id)
+        evidence_doc = evidence_ref.get()
+        
+        if not evidence_doc.exists:
+            raise HTTPException(status_code=404, detail="Evidence not found")
+        
+        evidence_data = evidence_doc.to_dict()
+        
+        # Verify ownership
+        if evidence_data.get('userId') != current_user['uid']:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this evidence")
+        
+        # Delete file from Storage
+        storage_path = evidence_data.get('storagePath')
+        await delete_evidence_file(storage_path, current_user['uid'])
+        
+        # Delete metadata from Firestore
+        await delete_evidence_metadata(evidence_id, current_user['uid'])
+        
+        print(f"✓ Evidence deleted: {evidence_id} by {current_user['email']}")
+        
+        return {
+            "success": True,
+            "message": "Evidence deleted successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error deleting evidence: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

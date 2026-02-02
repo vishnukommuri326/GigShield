@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function: Check if user owns the document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Appeals collection - users can only access their own appeals
+    match /appeals/{appealId} {
+      // Allow read if user owns the appeal
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      
+      // Allow create if authenticated and userId matches auth
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      
+      // Allow update/delete if user owns the appeal
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+    
+    // Evidence collection - users can only access their own evidence
+    match /evidence/{evidenceId} {
+      // Allow read if user owns the evidence
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      
+      // Allow create if:
+      // 1. User is authenticated
+      // 2. userId matches auth
+      // 3. caseId exists and points to an appeal the user owns
+      allow create: if isAuthenticated() 
+        && isOwner(request.resource.data.userId)
+        && exists(/databases/$(database)/documents/appeals/$(request.resource.data.caseId))
+        && get(/databases/$(database)/documents/appeals/$(request.resource.data.caseId)).data.userId == request.auth.uid;
+      
+      // Allow delete if user owns the evidence
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+      
+      // No updates - evidence should be immutable (delete and re-upload instead)
+      allow update: if false;
+    }
+    
+    // Users collection - users can only access their own profile
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // Knowledge base - public read, no write
+    match /knowledge/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Deny all other access by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

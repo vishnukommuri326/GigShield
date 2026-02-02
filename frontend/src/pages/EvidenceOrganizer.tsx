@@ -1,168 +1,107 @@
 import { useState, useEffect } from 'react';
-import { Upload, FileText, Image, Video, Trash2, Download, CheckCircle, Circle, AlertTriangle, Camera, MessageSquare, MapPin, BarChart3, Calendar, Clock, Plus, Eye } from 'lucide-react';
+import { Upload, FileText, Image, Trash2, Download, AlertCircle, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuths';
-import { uploadEvidence } from '../services/apiService';
+import { getMyAppeals } from '../services/apiService';
 
 interface EvidenceOrganizerProps {
   onNavigate: (page: string) => void;
 }
 
-interface EvidenceItem {
-  id: number;
-  name: string;
-  type: 'image' | 'document' | 'video';
-  size: string;
-  uploadDate: string;
-  tags: string[];
-  category: string;
-  url?: string;
+interface Appeal {
+  id: string;
+  platform: string;
+  deactivationReason: string;
+  status: string;
+  createdAt: string;
 }
 
-interface Incident {
-  id: number;
-  date: string;
-  time: string;
-  location: string;
-  description: string;
-  witnesses: string;
+interface EvidenceItem {
+  id: string;
+  filename: string;
+  originalFilename: string;
+  contentType: string;
+  size: number;
+  uploadedAt: string;
+  storagePath: string;
+  caseId: string;
 }
 
 const EvidenceOrganizer = ({ onNavigate }: EvidenceOrganizerProps) => {
   const { user } = useAuth();
-  const [selectedDeactivationType, setSelectedDeactivationType] = useState<string>('ratings');
-  const [showIncidentForm, setShowIncidentForm] = useState(false);
-  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [appeals, setAppeals] = useState<Appeal[]>([]);
+  const [selectedCase, setSelectedCase] = useState<Appeal | null>(null);
+  const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  const [previewFile, setPreviewFile] = useState<{ url: string; type: string; name: string } | null>(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
-  const [newIncident, setNewIncident] = useState({
-    date: '',
-    time: '',
-    location: '',
-    description: '',
-    witnesses: ''
-  });
-
-  const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([
-    {
-      id: 1,
-      name: 'delivery_screenshot.png',
-      type: 'image',
-      size: '2.4 MB',
-      uploadDate: '2026-01-20',
-      tags: ['delivery proof', 'timestamp'],
-      category: 'Performance Data'
-    },
-    {
-      id: 2,
-      name: 'customer_message.pdf',
-      type: 'document',
-      size: '156 KB',
-      uploadDate: '2026-01-20',
-      tags: ['communication', 'customer'],
-      category: 'Communication'
-    },
-    {
-      id: 3,
-      name: 'gps_route.png',
-      type: 'image',
-      size: '1.8 MB',
-      uploadDate: '2026-01-19',
-      tags: ['gps', 'route proof'],
-      category: 'GPS/Location'
-    },
-  ]);
-
-  const deactivationTypes = [
-    { id: 'ratings', label: 'Low Ratings', icon: BarChart3 },
-    { id: 'completion', label: 'Completion Rate', icon: CheckCircle },
-    { id: 'fraud', label: 'Fraud Allegation', icon: AlertTriangle },
-    { id: 'safety', label: 'Safety Incident', icon: AlertTriangle },
-    { id: 'customer', label: 'Customer Complaint', icon: MessageSquare },
-    { id: 'other', label: 'Other/Unknown', icon: Circle },
-  ];
-
-  // Dynamic checklist based on deactivation type
-  const getChecklistForType = (type: string) => {
-    const checklists: Record<string, Array<{ id: string; label: string; completed: boolean; icon: any }>> = {
-      ratings: [
-        { id: '1', label: 'Screenshot of your current rating', completed: false, icon: Camera },
-        { id: '2', label: 'Screenshot of rating history/trends', completed: true, icon: BarChart3 },
-        { id: '3', label: 'Screenshots of positive customer reviews', completed: false, icon: MessageSquare },
-        { id: '4', label: 'Proof of completed deliveries/rides count', completed: true, icon: CheckCircle },
-        { id: '5', label: 'Any communication about rating issues', completed: false, icon: MessageSquare },
-      ],
-      completion: [
-        { id: '1', label: 'Screenshot of completion rate', completed: true, icon: BarChart3 },
-        { id: '2', label: 'List of cancelled orders with reasons', completed: false, icon: FileText },
-        { id: '3', label: 'App screenshots showing cancellation reasons', completed: false, icon: Camera },
-        { id: '4', label: 'Evidence of app glitches/technical issues', completed: false, icon: AlertTriangle },
-        { id: '5', label: 'GPS data for disputed orders', completed: true, icon: MapPin },
-      ],
-      fraud: [
-        { id: '1', label: 'GPS/location data for disputed orders', completed: true, icon: MapPin },
-        { id: '2', label: 'Photos of completed deliveries', completed: true, icon: Camera },
-        { id: '3', label: 'Customer communication screenshots', completed: false, icon: MessageSquare },
-        { id: '4', label: 'Proof of payment/tips received', completed: false, icon: FileText },
-        { id: '5', label: 'Dashcam footage (if applicable)', completed: false, icon: Video },
-        { id: '6', label: 'Timestamp evidence', completed: false, icon: Clock },
-      ],
-      safety: [
-        { id: '1', label: 'Dashcam footage of incident', completed: false, icon: Video },
-        { id: '2', label: 'Police report (if filed)', completed: false, icon: FileText },
-        { id: '3', label: 'Witness statements', completed: false, icon: MessageSquare },
-        { id: '4', label: 'Photos of damage/scene', completed: false, icon: Camera },
-        { id: '5', label: 'GPS/location data', completed: false, icon: MapPin },
-        { id: '6', label: 'Insurance documentation', completed: false, icon: FileText },
-      ],
-      customer: [
-        { id: '1', label: 'Customer message screenshots', completed: true, icon: MessageSquare },
-        { id: '2', label: 'Photos of delivery/order', completed: true, icon: Camera },
-        { id: '3', label: 'GPS proof of delivery location', completed: false, icon: MapPin },
-        { id: '4', label: 'Timestamp evidence', completed: false, icon: Clock },
-        { id: '5', label: 'Your response to customer', completed: false, icon: MessageSquare },
-      ],
-      other: [
-        { id: '1', label: 'Copy of deactivation notice', completed: false, icon: FileText },
-        { id: '2', label: 'All platform communication', completed: false, icon: MessageSquare },
-        { id: '3', label: 'Account history screenshots', completed: false, icon: BarChart3 },
-        { id: '4', label: 'Any relevant evidence', completed: false, icon: Camera },
-      ],
+  // Load user's appeals on mount
+  useEffect(() => {
+    const loadAppeals = async () => {
+      if (!user) return;
+      
+      try {
+        const data = await getMyAppeals();
+        setAppeals(data);
+      } catch (err) {
+        console.error('Error loading appeals:', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    return checklists[type] || checklists.other;
-  };
 
-  const handleAddIncident = () => {
-    if (newIncident.date && newIncident.description) {
-      setIncidents([...incidents, { ...newIncident, id: Date.now() }]);
-      setNewIncident({ date: '', time: '', location: '', description: '', witnesses: '' });
-      setShowIncidentForm(false);
-    }
-  };
+    loadAppeals();
+  }, [user]);
 
-  const calculateEvidenceStrength = () => {
-    const checklist = getChecklistForType(selectedDeactivationType);
-    const completed = checklist.filter(item => item.completed).length;
-    const total = checklist.length;
-    const percentage = (completed / total) * 100;
-    
-    if (percentage >= 80) return { label: 'Strong', color: 'text-green-600', bg: 'bg-green-100' };
-    if (percentage >= 50) return { label: 'Moderate', color: 'text-yellow-600', bg: 'bg-yellow-100' };
-    return { label: 'Weak', color: 'text-red-600', bg: 'bg-red-100' };
-  };
+  // Load evidence when case is selected
+  useEffect(() => {
+    const loadEvidence = async () => {
+      if (!selectedCase || !user) return;
+      
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch(`http://localhost:8000/api/cases/${selectedCase.id}/evidence`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Ensure we only set valid evidence items
+          if (data.evidence && Array.isArray(data.evidence)) {
+            setEvidenceItems(data.evidence);
+          } else {
+            console.error('Invalid evidence data format:', data);
+            setEvidenceItems([]);
+          }
+        } else {
+          console.error('Failed to load evidence:', response.status);
+          setEvidenceItems([]);
+        }
+      } catch (err) {
+        console.error('Error loading evidence:', err);
+        setEvidenceItems([]);
+      }
+    };
+
+    loadEvidence();
+  }, [selectedCase, user]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !selectedCase || !user) return;
 
-    // Validate file
-    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/heic', 'image/webp', 'application/pdf', 'video/mp4'];
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'application/pdf'];
     if (!validTypes.includes(file.type)) {
-      setUploadError('Please upload images (JPG, PNG), PDFs, or videos (MP4) only');
+      setUploadError('Only images (JPEG, PNG, WebP) and PDFs are allowed');
       return;
     }
 
+    // Validate file size
     if (file.size > 10 * 1024 * 1024) {
       setUploadError('File size must be less than 10MB');
       return;
@@ -170,29 +109,67 @@ const EvidenceOrganizer = ({ onNavigate }: EvidenceOrganizerProps) => {
 
     setIsUploading(true);
     setUploadError('');
+    setSuccessMessage('');
 
     try {
-      const result = await uploadEvidence(file);
+      const token = await user.getIdToken();
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('case_id', selectedCase.id);
+
+      // Debug logging
+      console.log('Uploading file:', {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        caseId: selectedCase.id
+      });
+
+      const response = await fetch('http://localhost:8000/api/upload-evidence', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Failed to upload';
+        try {
+          const error = JSON.parse(errorText);
+          errorMessage = error.detail || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        console.error('Upload error details:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorMessage,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size
+        });
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      setSuccessMessage('Evidence uploaded successfully!');
       
-      // Determine file type
-      let fileType: 'image' | 'document' | 'video' = 'document';
-      if (file.type.startsWith('image/')) fileType = 'image';
-      else if (file.type.startsWith('video/')) fileType = 'video';
+      // Reload evidence list
+      const evidenceResponse = await fetch(`http://localhost:8000/api/cases/${selectedCase.id}/evidence`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-      // Add to evidence items
-      const newItem: EvidenceItem = {
-        id: Date.now(),
-        name: file.name,
-        type: fileType,
-        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-        uploadDate: new Date().toISOString().split('T')[0],
-        tags: [],
-        category: 'Uncategorized',
-        url: result.url
-      };
+      if (evidenceResponse.ok) {
+        const data = await evidenceResponse.json();
+        setEvidenceItems(data.evidence);
+      }
 
-      setEvidenceItems([...evidenceItems, newItem]);
-      console.log('✓ Evidence uploaded:', result.url);
+      // Clear the file input
+      event.target.value = '';
     } catch (err: any) {
       console.error('Upload error:', err);
       setUploadError(err.message || 'Failed to upload file');
@@ -201,467 +178,278 @@ const EvidenceOrganizer = ({ onNavigate }: EvidenceOrganizerProps) => {
     }
   };
 
-  const handleDeleteEvidence = (id: number) => {
-    setEvidenceItems(evidenceItems.filter(item => item.id !== id));
-  };
+  const handleDeleteEvidence = async (evidenceId: string) => {
+    if (!user || !window.confirm('Are you sure you want to delete this evidence?')) return;
 
-  const handlePreviewFile = (item: EvidenceItem) => {
-    if (!item.url) return;
-    setPreviewFile({ url: item.url, type: item.type, name: item.name });
-  };
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`http://localhost:8000/api/evidence/${evidenceId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-  const getFileIcon = (type: string) => {
-    switch (type) {
-      case 'image':
-        return <Image className="w-8 h-8 text-blue-500" />;
-      case 'video':
-        return <Video className="w-8 h-8 text-purple-500" />;
-      case 'document':
-        return <FileText className="w-8 h-8 text-green-500" />;
-      default:
-        return <FileText className="w-8 h-8 text-slate-500" />;
+      if (!response.ok) {
+        throw new Error('Failed to delete evidence');
+      }
+
+      // Remove from state
+      setEvidenceItems(evidenceItems.filter(item => item.id !== evidenceId));
+      setSuccessMessage('Evidence deleted successfully');
+    } catch (err) {
+      console.error('Delete error:', err);
+      setUploadError('Failed to delete evidence');
     }
   };
 
-  const strength = calculateEvidenceStrength();
-  const checklist = getChecklistForType(selectedDeactivationType);
-  const completedCount = checklist.filter(item => item.completed).length;
+  const handleDownload = async (evidenceId: string, filename: string) => {
+    if (!user) return;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
-            Evidence Organizer
-          </h1>
-          <p className="text-lg text-slate-600">
-            Build a strong case with organized evidence and documentation
-          </p>
-        </div>
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`http://localhost:8000/api/evidence/${evidenceId}/download`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-        {/* Deactivation Type Selector */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-[#1e3a5f] mb-4">What type of deactivation are you appealing?</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {deactivationTypes.map((type) => {
-              const Icon = type.icon;
-              return (
-                <button
-                  key={type.id}
-                  onClick={() => setSelectedDeactivationType(type.id)}
-                  className={`p-4 rounded-xl border-2 transition-all ${
-                    selectedDeactivationType === type.id
-                      ? 'border-blue-600 bg-blue-50 shadow-md'
-                      : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <Icon className={`w-6 h-6 mx-auto mb-2 ${selectedDeactivationType === type.id ? 'text-blue-600' : 'text-slate-600'}`} />
-                  <div className={`text-sm font-medium text-center ${selectedDeactivationType === type.id ? 'text-blue-900' : 'text-slate-700'}`}>
-                    {type.label}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      if (!response.ok) {
+        throw new Error('Failed to get download URL');
+      }
 
-        <div className="grid lg:grid-cols-3 gap-6 mb-6">
-          {/* Evidence Strength Indicator */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-lg font-bold text-[#1e3a5f] mb-4">Evidence Strength</h3>
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${strength.bg} mb-4`}>
-              <div className={`w-3 h-3 rounded-full ${strength.color.replace('text-', 'bg-')}`}></div>
-              <span className={`font-bold ${strength.color}`}>{strength.label}</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Checklist Progress</span>
-                <span className="font-semibold text-slate-900">{completedCount}/{checklist.length}</span>
-              </div>
-              <div className="w-full bg-slate-200 rounded-full h-3">
-                <div 
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${(completedCount / checklist.length) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 mt-4">
-              {completedCount === checklist.length ? 
-                '🎉 Excellent! You have all recommended evidence.' :
-                `Collect ${checklist.length - completedCount} more items to strengthen your case.`
-              }
+      const data = await response.json();
+      
+      // Open signed URL in new tab
+      window.open(data.downloadUrl, '_blank');
+    } catch (err) {
+      console.error('Download error:', err);
+      setUploadError('Failed to download file');
+    }
+  };
+
+  const getFileIcon = (contentType: string) => {
+    if (contentType.startsWith('image/')) {
+      return <Image className="w-8 h-8 text-blue-500" />;
+    }
+    return <FileText className="w-8 h-8 text-green-500" />;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-slate-600">Loading...</div>
+      </div>
+    );
+  }
+
+  // Case selection screen
+  if (!selectedCase) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-[#0f172a] mb-2">
+              Evidence Organizer
+            </h1>
+            <p className="text-lg text-slate-600">
+              Select a case to organize evidence
             </p>
           </div>
 
-          {/* Quick Stats */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-lg font-bold text-[#1e3a5f] mb-4">Evidence Files</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Image className="w-5 h-5 text-blue-600" />
-                  <span className="text-slate-700">Images</span>
-                </div>
-                <span className="font-bold text-slate-900">{evidenceItems.filter(i => i.type === 'image').length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-green-600" />
-                  <span className="text-slate-700">Documents</span>
-                </div>
-                <span className="font-bold text-slate-900">{evidenceItems.filter(i => i.type === 'document').length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Video className="w-5 h-5 text-purple-600" />
-                  <span className="text-slate-700">Videos</span>
-                </div>
-                <span className="font-bold text-slate-900">{evidenceItems.filter(i => i.type === 'video').length}</span>
-              </div>
-              <div className="border-t border-slate-200 pt-3 mt-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-slate-700">Total Files</span>
-                  <span className="font-bold text-blue-600">{evidenceItems.length}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Incident Logs */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-lg font-bold text-[#1e3a5f] mb-4">Incident Logs</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-700">Documented Incidents</span>
-                <span className="font-bold text-slate-900">{incidents.length}</span>
-              </div>
+          {appeals.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+              <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-slate-700 mb-2">No Cases Yet</h3>
+              <p className="text-slate-600 mb-6">Create an appeal first to organize evidence</p>
               <button
-                onClick={() => setShowIncidentForm(true)}
-                className="w-full py-2 px-4 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium flex items-center justify-center gap-2"
+                onClick={() => onNavigate('wizard')}
+                className="px-6 py-3 bg-[#d4af37] text-white rounded-lg hover:bg-[#d4af37]/90 transition-colors"
               >
-                <Plus className="w-4 h-4" />
-                Log New Incident
+                Create Appeal
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Evidence Checklist */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-[#1e3a5f] mb-4">
-            Evidence Checklist for {deactivationTypes.find(t => t.id === selectedDeactivationType)?.label}
-          </h2>
-          <div className="space-y-3">
-            {checklist.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.id}
-                  className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
-                    item.completed
-                      ? 'border-green-200 bg-green-50'
-                      : 'border-slate-200 hover:border-blue-300'
-                  }`}
-                >
-                  <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                    item.completed
-                      ? 'border-green-600 bg-green-600'
-                      : 'border-slate-300'
-                  }`}>
-                    {item.completed && <CheckCircle className="w-5 h-5 text-white" />}
-                  </div>
-                  <Icon className={`w-5 h-5 ${item.completed ? 'text-green-600' : 'text-slate-500'}`} />
-                  <span className={`flex-1 ${item.completed ? 'text-green-900 font-medium' : 'text-slate-700'}`}>
-                    {item.label}
-                  </span>
-                  {item.completed && (
-                    <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full font-medium">
-                      Collected
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Incident Form Modal */}
-        {showIncidentForm && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8">
-              <h2 className="text-2xl font-bold text-[#1e3a5f] mb-6">Document Incident</h2>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      <Calendar className="w-4 h-4 inline mr-1" />
-                      Date
-                    </label>
-                    <input
-                      type="date"
-                      value={newIncident.date}
-                      onChange={(e) => setNewIncident({ ...newIncident, date: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      <Clock className="w-4 h-4 inline mr-1" />
-                      Time
-                    </label>
-                    <input
-                      type="time"
-                      value={newIncident.time}
-                      onChange={(e) => setNewIncident({ ...newIncident, time: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    <MapPin className="w-4 h-4 inline mr-1" />
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    value={newIncident.location}
-                    onChange={(e) => setNewIncident({ ...newIncident, location: e.target.value })}
-                    placeholder="Address or general area"
-                    className="w-full px-4 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    What Happened?
-                  </label>
-                  <textarea
-                    value={newIncident.description}
-                    onChange={(e) => setNewIncident({ ...newIncident, description: e.target.value })}
-                    placeholder="Describe the incident in detail: what happened, who was involved, what was said, etc."
-                    rows={4}
-                    className="w-full px-4 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    <MessageSquare className="w-4 h-4 inline mr-1" />
-                    Witnesses (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={newIncident.witnesses}
-                    onChange={(e) => setNewIncident({ ...newIncident, witnesses: e.target.value })}
-                    placeholder="Names or descriptions of any witnesses"
-                    className="w-full px-4 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3 mt-6">
+          ) : (
+            <div className="grid gap-4">
+              {appeals.map((appeal) => (
                 <button
-                  onClick={() => setShowIncidentForm(false)}
-                  className="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-semibold"
+                  key={appeal.id}
+                  onClick={() => setSelectedCase(appeal)}
+                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow text-left"
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddIncident}
-                  disabled={!newIncident.date || !newIncident.description}
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:bg-slate-300 disabled:cursor-not-allowed"
-                >
-                  Save Incident
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Incident Log List */}
-        {incidents.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-            <h2 className="text-xl font-bold text-[#1e3a5f] mb-4">Documented Incidents</h2>
-            <div className="space-y-4">
-              {incidents.map((incident) => (
-                <div key={incident.id} className="border-2 border-slate-200 rounded-xl p-4 hover:border-blue-300 transition-colors">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-blue-100 p-2 rounded-lg">
-                        <Calendar className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-slate-900">{incident.date} {incident.time && `at ${incident.time}`}</div>
-                        {incident.location && (
-                          <div className="text-sm text-slate-600 flex items-center gap-1 mt-1">
-                            <MapPin className="w-4 h-4" />
-                            {incident.location}
-                          </div>
-                        )}
-                      </div>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-800 mb-2">{appeal.platform}</h3>
+                      <p className="text-slate-600 text-sm mb-2 line-clamp-2">
+                        {appeal.deactivationReason && appeal.deactivationReason.length < 200 
+                          ? appeal.deactivationReason 
+                          : appeal.deactivationReason?.substring(0, 200) + '...' || 'No reason provided'}
+                      </p>
+                      <p className="text-slate-500 text-xs">Created {formatDate(appeal.createdAt)}</p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      appeal.status === 'approved' ? 'bg-green-100 text-green-700' :
+                      appeal.status === 'denied' ? 'bg-red-100 text-red-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {appeal.status}
                     </div>
                   </div>
-                  <p className="text-slate-700 mb-2">{incident.description}</p>
-                  {incident.witnesses && (
-                    <div className="text-sm text-slate-600 flex items-center gap-1">
-                      <MessageSquare className="w-4 h-4" />
-                      Witnesses: {incident.witnesses}
-                    </div>
-                  )}
-                </div>
+                </button>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      </div>
+    );
+  }
 
-        {/* Upload Zone */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-          <h2 className="text-xl font-bold text-[#1e3a5f] mb-4">Upload Evidence Files</h2>
+  // Evidence management screen
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => setSelectedCase(null)}
+            className="flex items-center gap-2 text-slate-600 hover:text-slate-800 mb-4 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back to Cases</span>
+          </button>
+          <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
+            Evidence for {selectedCase.platform}
+          </h1>
+          <p className="text-lg text-slate-600 line-clamp-2">
+            {selectedCase.deactivationReason && selectedCase.deactivationReason.length < 200
+              ? selectedCase.deactivationReason
+              : selectedCase.deactivationReason?.substring(0, 200) + '...' || 'No reason provided'}
+          </p>
+        </div>
+
+        {/* Warning Banner */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-yellow-800 font-semibold">Security Notice</p>
+            <p className="text-yellow-700 text-sm">
+              Do not upload sensitive personal documents (SSN, bank statements, etc.). This tool is experimental. 
+              Files are stored privately and require authentication to access. Maximum file size: 10MB. 
+              Allowed types: Images (JPEG, PNG, WebP) and PDFs only.
+            </p>
+          </div>
+        </div>
+
+        {/* Upload Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          <h2 className="text-xl font-bold text-[#0f172a] mb-4">Upload Evidence</h2>
           
           {uploadError && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <XCircle className="w-5 h-5 text-red-600" />
               <p className="text-red-600">{uploadError}</p>
             </div>
           )}
-          
-          <label className="block">
+
+          {successMessage && (
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <p className="text-green-600">{successMessage}</p>
+            </div>
+          )}
+
+          <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-[#d4af37] transition-colors">
+            <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+            <p className="text-slate-600 mb-2">
+              {isUploading ? 'Uploading...' : 'Click to upload or drag and drop'}
+            </p>
+            <p className="text-slate-500 text-sm mb-4">
+              Images (JPEG, PNG, WebP) or PDF (max 10MB)
+            </p>
             <input
               type="file"
+              accept="image/jpeg,image/png,image/jpg,image/webp,application/pdf"
               onChange={handleFileUpload}
-              accept="image/*,application/pdf,video/mp4"
-              className="hidden"
               disabled={isUploading}
+              className="hidden"
+              id="file-upload"
             />
-            <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center hover:border-[#0d9488] transition-colors cursor-pointer">
-              <Upload className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-slate-700 mb-2">
-                {isUploading ? 'Uploading...' : 'Drag & Drop Files Here'}
-              </h3>
-              <p className="text-slate-500 mb-4">
-                Or click to browse your files
-              </p>
-              <p className="text-sm text-slate-400 mb-4">
-                Supports: Images (JPG, PNG), PDFs, Videos (MP4), Screenshots
-              </p>
-              <div className="inline-flex items-center gap-2 px-6 py-3 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors font-semibold">
-                {isUploading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Uploading...
-                  </>
-                ) : (
-                  'Choose Files'
-                )}
-              </div>
-            </div>
-          </label>
+            <label
+              htmlFor="file-upload"
+              className={`inline-block px-6 py-3 bg-[#d4af37] text-white rounded-lg hover:bg-[#d4af37]/90 transition-colors cursor-pointer ${
+                isUploading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {isUploading ? 'Uploading...' : 'Select File'}
+            </label>
+          </div>
         </div>
 
-        {/* Evidence Files List */}
+        {/* Evidence List */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-[#1e3a5f] mb-6">Your Evidence Files</h2>
-          <div className="space-y-4">
-            {evidenceItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-4 border-2 border-slate-200 rounded-xl hover:border-[#0d9488] hover:shadow-md transition-all">
-                <div className="flex items-center gap-4">
-                  {getFileIcon(item.type)}
-                  <div>
-                    <h3 className="font-semibold text-slate-800">{item.name}</h3>
-                    <div className="flex items-center gap-4 text-sm text-slate-500 mt-1">
-                      <span>{item.size}</span>
-                      <span>•</span>
-                      <span>Uploaded {item.uploadDate}</span>
-                      <span>•</span>
-                      <span className="text-blue-600 font-medium">{item.category}</span>
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      {item.tags.map((tag, index) => (
-                        <span key={index} className="px-2 py-1 bg-[#0d9488]/10 text-[#0d9488] text-xs rounded-full font-medium">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => handlePreviewFile(item)}
-                    className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Preview"
-                  >
-                    <Eye className="w-5 h-5" />
-                  </button>
-                  {item.url && (
-                    <a
-                      href={item.url}
-                      download={item.name}
-                      className="p-2 text-slate-600 hover:text-[#0d9488] hover:bg-slate-100 rounded-lg transition-colors"
-                      title="Download"
-                    >
-                      <Download className="w-5 h-5" />
-                    </a>
-                  )}
-                  <button 
-                    onClick={() => handleDeleteEvidence(item.id)}
-                    className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          <h2 className="text-xl font-bold text-[#1e3a5f] mb-4">
+            Uploaded Evidence ({evidenceItems.length})
+          </h2>
 
-        {/* File Preview Modal */}
-        {previewFile && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50" onClick={() => setPreviewFile(null)}>
-            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                <h3 className="text-xl font-bold text-slate-900">{previewFile.name}</h3>
-                <button
-                  onClick={() => setPreviewFile(null)}
-                  className="text-slate-400 hover:text-slate-600 transition-colors text-2xl"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="p-6 overflow-auto max-h-[calc(90vh-100px)]">
-                {previewFile.type === 'image' && (
-                  <img
-                    src={previewFile.url}
-                    alt={previewFile.name}
-                    className="max-w-full h-auto mx-auto rounded-lg"
-                  />
-                )}
-                {previewFile.type === 'video' && (
-                  <video
-                    src={previewFile.url}
-                    controls
-                    className="max-w-full h-auto mx-auto rounded-lg"
-                  >
-                    Your browser does not support video playback.
-                  </video>
-                )}
-                {previewFile.type === 'document' && (
-                  <div className="text-center">
-                    <FileText className="w-24 h-24 text-slate-400 mx-auto mb-4" />
-                    <p className="text-slate-600 mb-4">PDF preview not available</p>
-                    <a
-                      href={previewFile.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <Download className="w-5 h-5" />
-                      Download PDF
-                    </a>
-                  </div>
-                )}
-              </div>
+          {evidenceItems.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-600">No evidence uploaded yet</p>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="grid gap-4">
+              {evidenceItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      {getFileIcon(item.contentType)}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-800 truncate">
+                          {item.originalFilename || item.filename || 'Unknown File'}
+                        </p>
+                        <div className="flex gap-4 text-sm text-slate-500">
+                          <span>{formatFileSize(item.size || 0)}</span>
+                          <span>{item.uploadedAt ? formatDate(item.uploadedAt) : 'Unknown date'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDownload(item.id, item.originalFilename || item.filename)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Download"
+                      >
+                        <Download className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEvidence(item.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

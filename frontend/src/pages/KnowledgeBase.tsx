@@ -266,7 +266,7 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
+          <h1 className="text-4xl font-bold text-[#0f172a] mb-2">
             Platform Policy Insights
           </h1>
           <p className="text-lg text-slate-600">
@@ -277,7 +277,7 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
         {/* Search Bar */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <div className="flex items-center gap-4 mb-4">
-            <Search className="w-6 h-6 text-[#0d9488]" />
+            <Search className="w-6 h-6 text-[#d4af37]" />
             <h2 className="text-xl font-bold text-slate-800">Search Knowledge Base</h2>
           </div>
           <div className="flex gap-3">
@@ -310,7 +310,7 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h4 className="text-lg font-bold text-[#1e3a5f]">{article.title}</h4>
+                      <h4 className="text-lg font-bold text-[#0f172a]">{article.title}</h4>
                       <div className="flex gap-2 mt-1">
                         <span className="text-xs px-2 py-1 bg-slate-100 text-slate-700 rounded">{article.category}</span>
                         {article.state !== 'All' && (
@@ -337,7 +337,7 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8">
               <div className="mb-6">
-                <h2 className="text-3xl font-bold text-[#1e3a5f] mb-3">{selectedArticle.title}</h2>
+                <h2 className="text-3xl font-bold text-[#0f172a] mb-3">{selectedArticle.title}</h2>
                 <div className="flex gap-2">
                   <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium">{selectedArticle.category}</span>
                   {selectedArticle.state !== 'All' && (
@@ -429,7 +429,7 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
 
         {/* Platform Comparison */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-bold text-[#1e3a5f] mb-6">Platform Comparison</h2>
+          <h2 className="text-2xl font-bold text-[#0f172a] mb-6">Platform Comparison</h2>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -461,7 +461,7 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-slate-200 rounded-full h-2 max-w-[100px]">
                           <div
-                            className="bg-[#0d9488] h-2 rounded-full"
+                            className="bg-[#d4af37] h-2 rounded-full"
                             style={{ width: `${platform.successRate}%` }}
                           ></div>
                         </div>
@@ -497,7 +497,7 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
                       <h3 className="font-semibold text-slate-800 mb-1">{flag.title}</h3>
                       <p className="text-sm text-slate-600 mb-2">{flag.description}</p>
                       <div className="flex items-start gap-2 mt-3 p-2 bg-white rounded">
-                        <Info className="w-4 h-4 text-[#0d9488] flex-shrink-0 mt-0.5" />
+                        <Info className="w-4 h-4 text-[#d4af37] flex-shrink-0 mt-0.5" />
                         <p className="text-xs text-slate-700">
                           <span className="font-semibold">Action:</span> {flag.action}
                         </p>
@@ -522,8 +522,8 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
               return (
                 <div key={index} className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-5 border border-slate-200">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-[#0d9488]/10 rounded-lg flex items-center justify-center">
-                      <Icon className="w-6 h-6 text-[#0d9488]" />
+                    <div className="w-10 h-10 bg-[#d4af37]/10 rounded-lg flex items-center justify-center">
+                      <Icon className="w-6 h-6 text-[#d4af37]" />
                     </div>
                     <h3 className="text-lg font-semibold text-slate-800">{tipCategory.category}</h3>
                   </div>
@@ -545,7 +545,7 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
         <div className="mt-8 grid md:grid-cols-3 gap-4">
           <button
             onClick={() => onNavigate('notice-analyzer')}
-            className="bg-gradient-to-r from-[#0d9488] to-[#14b8a6] text-white px-6 py-4 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+            className="bg-[#0f172a] text-white px-6 py-4 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
           >
             <FileText className="w-5 h-5" />
             Analyze My Notice

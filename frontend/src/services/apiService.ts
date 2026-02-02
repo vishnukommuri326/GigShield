@@ -240,11 +240,14 @@ export const checkHealth = async () => {
 /**
  * Upload evidence file (image, PDF, document)
  */
-export const uploadEvidence = async (file: File): Promise<{ url: string; filename: string; contentType: string }> => {
+export const uploadEvidence = async (file: File, caseId?: string): Promise<{ url: string; filename: string; contentType: string }> => {
   const token = await getAuthToken();
   
   const formData = new FormData();
   formData.append('file', file);
+  if (caseId) {
+    formData.append('case_id', caseId);
+  }
   
   const response = await fetch(`${API_BASE_URL}/api/upload-evidence`, {
     method: 'POST',

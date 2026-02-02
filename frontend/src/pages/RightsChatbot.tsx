@@ -144,7 +144,7 @@ const RightsChatbot = ({ onNavigate }: RightsChatbotProps) => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-4">
-          <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
+          <h1 className="text-4xl font-bold text-[#0f172a] mb-2">
             Rights Chatbot
           </h1>
           <p className="text-lg text-slate-600">
@@ -162,14 +162,14 @@ const RightsChatbot = ({ onNavigate }: RightsChatbotProps) => {
                   className={`flex gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {message.type === 'bot' && (
-                    <div className="w-10 h-10 rounded-full bg-[#0d9488] flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-[#d4af37] flex items-center justify-center flex-shrink-0">
                       <Bot className="w-6 h-6 text-white" />
                     </div>
                   )}
                   <div
                     className={`max-w-[70%] rounded-2xl px-4 py-3 ${
                       message.type === 'user'
-                        ? 'bg-[#0d9488] text-white'
+                        ? 'bg-[#d4af37] text-white'
                         : 'bg-slate-100 text-slate-800'
                     }`}
                   >
@@ -186,7 +186,7 @@ const RightsChatbot = ({ onNavigate }: RightsChatbotProps) => {
                     </p>
                   </div>
                   {message.type === 'user' && (
-                    <div className="w-10 h-10 rounded-full bg-[#1e3a5f] flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-[#0f172a] flex items-center justify-center flex-shrink-0">
                       <User className="w-6 h-6 text-white" />
                     </div>
                   )}
@@ -199,7 +199,7 @@ const RightsChatbot = ({ onNavigate }: RightsChatbotProps) => {
                       <button
                         key={index}
                         onClick={() => handleActionClick(action.action)}
-                        className="px-4 py-2 bg-[#0d9488]/10 hover:bg-[#0d9488]/20 text-[#0d9488] rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        className="px-4 py-2 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 text-[#d4af37] rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                       >
                         {action.action === 'wizard' && <FileText className="w-4 h-4" />}
                         {action.action === 'notice-analyzer' && <AlertCircle className="w-4 h-4" />}
@@ -235,7 +235,7 @@ const RightsChatbot = ({ onNavigate }: RightsChatbotProps) => {
           {messages.length === 1 && (
             <div className="px-6 pb-4 border-t border-slate-200">
               <div className="flex items-center gap-2 mb-3 mt-4">
-                <Lightbulb className="w-5 h-5 text-[#0d9488]" />
+                <Lightbulb className="w-5 h-5 text-[#d4af37]" />
                 <p className="text-sm font-medium text-slate-700">Try asking:</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -260,7 +260,7 @@ const RightsChatbot = ({ onNavigate }: RightsChatbotProps) => {
                       <button
                         key={index}
                         onClick={() => handleActionClick(action.action)}
-                        className="flex-1 px-4 py-3 bg-gradient-to-r from-[#0d9488] to-[#0d9488]/80 hover:from-[#0d9488]/90 hover:to-[#0d9488]/70 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 shadow-sm"
+                        className="flex-1 px-4 py-3 bg-[#0f172a] hover:bg-[#0f172a]/90 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 shadow-sm"
                       >
                         <Icon className="w-4 h-4" />
                         {action.label}
