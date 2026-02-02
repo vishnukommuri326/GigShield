@@ -64,6 +64,7 @@ export interface AppealData {
   appeal_tone?: string;
   user_state?: string;
   evidence?: string;
+  deadline_days?: number;
 }
 
 export interface AppealResult {

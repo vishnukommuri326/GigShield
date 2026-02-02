@@ -34,6 +34,8 @@ class AppealCreate(BaseModel):
     total_deliveries: Optional[str] = None
     appeal_tone: Optional[str] = "professional"
     user_state: Optional[str] = None
+    evidence: Optional[str] = None
+    deadline_days: Optional[int] = 10
 
 class AppealResponse(BaseModel):
     id: int

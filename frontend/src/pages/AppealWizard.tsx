@@ -12,6 +12,7 @@ interface AppealWizardProps {
     currentStep?: number;
     reason?: string;
     missingInfo?: string[];
+    deadlineDays?: number;
   };
 }
 
@@ -504,7 +505,8 @@ const AppealWizard = ({ onNavigate, prefilledData }: AppealWizardProps) => {
         total_deliveries: totalDeliveries,
         appeal_tone: appealTone,
         user_state: userState,
-        evidence: evidenceText
+        evidence: evidenceText,
+        deadline_days: prefilledData?.deadlineDays || 10  // Default to 10 days if not from analyzer
       });
 
       // Save the generated letter and appeal ID

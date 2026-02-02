@@ -364,6 +364,57 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
         </div>
       </section>
 
+      {/* Platforms Section */}
+      <section id="platforms" className="bg-white py-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">Supported Platforms</h2>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+              GigShield works with deactivation notices from all major gig platforms
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {[
+              { name: 'DoorDash', gradient: 'from-red-500 to-red-600', text: 'DD' },
+              { name: 'Uber', gradient: 'from-black to-gray-900', text: 'uber' },
+              { name: 'Lyft', gradient: 'from-pink-500 to-pink-600', text: 'lyft' },
+              { name: 'Instacart', gradient: 'from-green-500 to-green-600', text: 'instacart' },
+              { name: 'Grubhub', gradient: 'from-orange-500 to-orange-600', text: 'grubhub' },
+              { name: 'Amazon Flex', gradient: 'from-blue-500 to-blue-700', text: 'amazon' },
+              { name: 'Postmates', gradient: 'from-yellow-500 to-yellow-600', text: 'postmates' },
+              { name: 'Shipt', gradient: 'from-purple-500 to-purple-600', text: 'shipt' },
+              { name: 'Uber Eats', gradient: 'from-green-600 to-green-700', text: 'UberEATS' },
+              { name: 'Spark', gradient: 'from-yellow-600 to-orange-600', text: 'spark' },
+            ].map((platform, index) => (
+              <div
+                key={index}
+                className="bg-white border-2 border-slate-200 rounded-xl p-6 hover:shadow-lg transition-all hover:border-blue-300 cursor-pointer group"
+              >
+                <div className={`bg-gradient-to-br ${platform.gradient} h-20 rounded-lg mb-4 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform`}>
+                  <span className="text-white font-black text-xl tracking-tight">
+                    {platform.text}
+                  </span>
+                </div>
+                <h3 className="font-bold text-slate-900 text-center text-sm">{platform.name}</h3>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-slate-600 mb-4">
+              Don't see your platform? <span className="font-semibold">GigShield works with any gig platform.</span>
+            </p>
+            <button
+              onClick={() => onNavigate('wizard')}
+              className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Start Your Appeal
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-slate-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-6">

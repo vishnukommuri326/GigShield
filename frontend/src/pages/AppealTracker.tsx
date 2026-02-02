@@ -14,6 +14,9 @@ interface Appeal {
   generatedLetter: string;
   status: string;
   createdAt: string;
+  submittedAt?: string;
+  appealDeadline?: string;
+  lastUpdated?: string;
   userStory?: string;
   accountTenure?: string;
   currentRating?: string;
@@ -29,6 +32,9 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingAppeal, setDeletingAppeal] = useState(false);
+  const [showStatusUpdate, setShowStatusUpdate] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
     const loadAppeals = async () => {
@@ -54,6 +60,59 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
       month: 'short', 
       day: 'numeric' 
     });
+  };
+
+  const getDaysRemaining = (deadline?: string) => {
+    if (!deadline) return null;
+    const today = new Date();
+    const deadlineDate = new Date(deadline);
+    const diffTime = deadlineDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getUrgencyColor = (days: number | null) => {
+    if (days === null) return 'text-slate-500';
+    if (days < 0) return 'text-red-600';
+    if (days <= 3) return 'text-red-600';
+    if (days <= 7) return 'text-orange-600';
+    if (days <= 14) return 'text-yellow-600';
+    return 'text-green-600';
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!selectedAppeal || !newStatus) return;
+    
+    setUpdatingStatus(true);
+    try {
+      // Update appeal status in backend
+      const response = await fetch(`http://localhost:8000/api/appeals/${selectedAppeal.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user?.getIdToken()}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!response.ok) throw new Error('Failed to update status');
+
+      // Update local state
+      const updatedAppeals = appeals.map(a => 
+        a.id === selectedAppeal.id 
+          ? { ...a, status: newStatus, lastUpdated: new Date().toISOString() }
+          : a
+      );
+      setAppeals(updatedAppeals);
+      setSelectedAppeal({ ...selectedAppeal, status: newStatus, lastUpdated: new Date().toISOString() });
+      setShowStatusUpdate(false);
+      setNewStatus('');
+    } catch (err) {
+      console.error('Failed to update status:', err);
+      setError('Failed to update appeal status');
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -215,12 +274,18 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
                     <p className="text-sm font-medium text-slate-700">{formatDate(appeal.createdAt)}</p>
                   </div>
                 </div>
-                {appeal.currentRating && (
+                {appeal.appealDeadline && (
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 flex items-center justify-center">⭐</div>
+                    <Clock className="w-5 h-5 text-slate-400" />
                     <div>
-                      <p className="text-xs text-slate-500">Rating</p>
-                      <p className="text-sm font-medium text-slate-700">{appeal.currentRating}</p>
+                      <p className="text-xs text-slate-500">Deadline</p>
+                      <p className={`text-sm font-bold ${getUrgencyColor(getDaysRemaining(appeal.appealDeadline))}`}>
+                        {getDaysRemaining(appeal.appealDeadline) !== null && getDaysRemaining(appeal.appealDeadline)! >= 0
+                          ? `${getDaysRemaining(appeal.appealDeadline)} days left`
+                          : getDaysRemaining(appeal.appealDeadline) !== null
+                          ? `${Math.abs(getDaysRemaining(appeal.appealDeadline)!)} days overdue`
+                          : 'No deadline'}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -233,6 +298,17 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
                 >
                   <FileText className="w-4 h-4" />
                   View Letter
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedAppeal(appeal);
+                    setNewStatus(appeal.status);
+                    setShowStatusUpdate(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Update Status
                 </button>
               </div>
             </div>
@@ -378,6 +454,101 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
                       <Trash2 className="w-4 h-4" />
                       Delete
                     </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Update Modal */}
+        {showStatusUpdate && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold text-slate-800 mb-4">Update Appeal Status</h3>
+              <p className="text-slate-600 mb-4">
+                Track your appeal progress by updating its status
+              </p>
+              
+              <div className="space-y-3 mb-6">
+                <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="pending"
+                    checked={newStatus === 'pending'}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-4 h-4 text-yellow-600"
+                  />
+                  <div className="flex items-center gap-2 flex-1">
+                    <Clock className="w-5 h-5 text-yellow-600" />
+                    <div>
+                      <p className="font-medium text-slate-800">Pending</p>
+                      <p className="text-xs text-slate-500">Awaiting platform response</p>
+                    </div>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="approved"
+                    checked={newStatus === 'approved'}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-4 h-4 text-green-600"
+                  />
+                  <div className="flex items-center gap-2 flex-1">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <div>
+                      <p className="font-medium text-slate-800">Approved</p>
+                      <p className="text-xs text-slate-500">Account reactivated</p>
+                    </div>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="denied"
+                    checked={newStatus === 'denied'}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-4 h-4 text-red-600"
+                  />
+                  <div className="flex items-center gap-2 flex-1">
+                    <XCircle className="w-5 h-5 text-red-600" />
+                    <div>
+                      <p className="font-medium text-slate-800">Denied</p>
+                      <p className="text-xs text-slate-500">Appeal rejected</p>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowStatusUpdate(false);
+                    setNewStatus('');
+                  }}
+                  disabled={updatingStatus}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleStatusUpdate}
+                  disabled={updatingStatus || !newStatus}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {updatingStatus ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Status'
                   )}
                 </button>
               </div>

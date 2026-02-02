@@ -482,7 +482,8 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
                       deactivationNotice: noticeText,
                       currentStep: 3,
                       reason: analysisResult.reason,
-                      missingInfo: analysisResult.missingInfo
+                      missingInfo: analysisResult.missingInfo,
+                      deadlineDays: analysisResult.daysRemaining
                     });
                   }
                   onNavigate('wizard');
