@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, XCircle, AlertCircle, Plus, Calendar, FileText, ArrowLeft, Trash2 } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertCircle, Plus, Calendar, FileText, ArrowLeft, Trash2, Filter, Search, TrendingUp, Sparkles } from 'lucide-react';
 import { getMyAppeals, deleteAppeal } from '../services/apiService';
 import { useAuth } from '../hooks/useAuths';
 
@@ -35,6 +35,9 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
   const [showStatusUpdate, setShowStatusUpdate] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [caseScores, setCaseScores] = useState<{[key: string]: any}>({});
 
   useEffect(() => {
     const loadAppeals = async () => {
@@ -43,6 +46,20 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
       try {
         const data = await getMyAppeals();
         setAppeals(data);
+        
+        // Fetch scores for all appeals
+        const scores: {[key: string]: any} = {};
+        for (const appeal of data) {
+          try {
+            const response = await fetch(`http://localhost:8000/api/cases/${appeal.id}/score`);
+            if (response.ok) {
+              scores[appeal.id] = await response.json();
+            }
+          } catch (err) {
+            console.log(`Couldn't fetch score for ${appeal.id}`);
+          }
+        }
+        setCaseScores(scores);
       } catch (err: any) {
         console.error('Error loading appeals:', err);
         setError(err.message || 'Failed to load appeals');
@@ -183,6 +200,15 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
     );
   };
 
+  // Filter and search appeals
+  const filteredAppeals = appeals.filter(appeal => {
+    const matchesStatus = filterStatus === 'all' || appeal.status.toLowerCase() === filterStatus;
+    const matchesSearch = searchQuery === '' || 
+      appeal.platform.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      appeal.deactivationReason.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
   const totalAppeals = appeals.length;
   const pendingAppeals = appeals.filter(a => a.status === 'generated' || a.status === 'pending').length;
   const approvedAppeals = appeals.filter(a => a.status === 'approved').length;
@@ -245,9 +271,46 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
           </div>
         </div>
 
+        {/* Search and Filter */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by platform or reason..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-slate-600" />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="generated">Generated</option>
+                <option value="approved">Approved</option>
+                <option value="denied">Denied</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-4 text-sm text-slate-600">
+            Showing {filteredAppeals.length} of {totalAppeals} appeals
+          </div>
+        </div>
+
         {/* Appeals Grid */}
         <div className="grid gap-6 mb-8">
-          {appeals.map((appeal) => (
+          {filteredAppeals.map((appeal) => (
             <div 
               key={appeal.id} 
               className="bg-white rounded-2xl shadow-lg p-6"
@@ -265,7 +328,36 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
                 </div>
                 {getStatusBadge(appeal.status)}
               </div>
-
+              {/* Case Score Display */}
+              {caseScores[appeal.id] && (
+                <div className="mb-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Sparkles className="w-5 h-5 text-indigo-600" />
+                      <div>
+                        <p className="text-sm font-semibold text-indigo-900">Case Strength Score</p>
+                        <p className="text-xs text-indigo-700">Based on {caseScores[appeal.id].factors.length} factors</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className={`px-4 py-2 rounded-full font-bold text-white ${
+                        caseScores[appeal.id].label === 'high' ? 'bg-green-600' :
+                        caseScores[appeal.id].label === 'medium' ? 'bg-yellow-600' :
+                        'bg-red-600'
+                      }`}>
+                        {caseScores[appeal.id].score}
+                      </div>
+                      <div className={`text-xs font-semibold px-2 py-1 rounded ${
+                        caseScores[appeal.id].label === 'high' ? 'bg-green-100 text-green-700' :
+                        caseScores[appeal.id].label === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {caseScores[appeal.id].label.toUpperCase()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="grid md:grid-cols-2 gap-4 mb-4">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-slate-400" />
@@ -313,6 +405,24 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
               </div>
             </div>
           ))}
+
+          {/* Empty state for filtered results */}
+          {filteredAppeals.length === 0 && appeals.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+              <Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-slate-700 mb-2">No Matching Appeals</h3>
+              <p className="text-slate-600 mb-4">Try adjusting your search or filter criteria</p>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setFilterStatus('all');
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
         </div>
 
         {appeals.length === 0 && !loading && (
