@@ -141,6 +141,11 @@ async def generate_appeal(
         print(f"✓ AI-generated letter ({len(letter)} chars)")
         
         # Save appeal to Firestore
+        from datetime import datetime, timedelta
+        
+        # Calculate deadline date
+        deadline_date = datetime.utcnow() + timedelta(days=request.deadline_days or 10)
+        
         appeal_data = {
             'platform': request.platform,
             'deactivationReason': request.deactivation_reason,
@@ -152,7 +157,9 @@ async def generate_appeal(
             'appealTone': request.appeal_tone,
             'userState': request.user_state,
             'generatedLetter': letter,
-            'status': 'generated'
+            'status': 'generated',
+            'createdAt': datetime.utcnow().isoformat(),
+            'appealDeadline': deadline_date.isoformat()
         }
         
         appeal_id = await save_appeal(current_user['uid'], appeal_data)
@@ -368,4 +375,55 @@ async def upload_evidence(
         raise
     except Exception as e:
         print(f"❌ Error uploading evidence: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/appeals/{appeal_id}/status")
+async def update_appeal_status(
+    appeal_id: str,
+    status_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Update appeal status (pending/approved/denied).
+    Requires authentication.
+    """
+    try:
+        from datetime import datetime
+        from app.core.firebase import db
+        
+        # Verify appeal belongs to user
+        appeal_ref = db.collection('appeals').document(appeal_id)
+        appeal = appeal_ref.get()
+        
+        if not appeal.exists:
+            raise HTTPException(status_code=404, detail="Appeal not found")
+        
+        appeal_data = appeal.to_dict()
+        if appeal_data.get('userId') != current_user['uid']:
+            raise HTTPException(status_code=403, detail="Not authorized to update this appeal")
+        
+        # Update status
+        new_status = status_data.get('status')
+        if new_status not in ['pending', 'approved', 'denied', 'generated']:
+            raise HTTPException(status_code=400, detail="Invalid status")
+        
+        appeal_ref.update({
+            'status': new_status,
+            'lastUpdated': datetime.utcnow().isoformat(),
+            'submittedAt': datetime.utcnow().isoformat() if new_status == 'pending' else appeal_data.get('submittedAt')
+        })
+        
+        print(f"✓ Updated appeal {appeal_id} status to {new_status} for user: {current_user['email']}")
+        
+        return {
+            "success": True,
+            "status": new_status,
+            "lastUpdated": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error updating appeal status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
