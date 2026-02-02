@@ -1,4 +1,5 @@
-import { BarChart3, TrendingUp, Clock, AlertTriangle, CheckCircle, XCircle, MinusCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BarChart3, TrendingUp, Clock, AlertTriangle, CheckCircle, XCircle, MinusCircle, Loader2 } from 'lucide-react';
 
 interface AnalyticsDashboardProps {
   onNavigate: (page: string) => void;
@@ -20,38 +21,113 @@ interface ReasonData {
   percentage: number;
 }
 
+interface AnalyticsResponse {
+  summary: {
+    totalCases: number;
+    totalApproved: number;
+    totalDenied: number;
+    totalPending: number;
+    simulatedCount: number;
+    dataSource: 'simulated' | 'real' | 'mixed';
+  };
+  casesByPlatform: { [key: string]: number };
+  outcomesByPlatform: {
+    [key: string]: {
+      approved: number;
+      denied: number;
+      pending: number;
+    };
+  };
+  avgResponseTimeDays: { [key: string]: number };
+  medianResponseTimeDays: { [key: string]: number };
+  responseTimeBuckets: { [key: string]: number };
+  reasonDistribution: { [key: string]: number };
+}
+
 const AnalyticsDashboard = ({ onNavigate }: AnalyticsDashboardProps) => {
-  // Seeded synthetic data for demonstration
-  const casesByPlatform: CaseData[] = [
-    { platform: 'DoorDash', total: 42, approved: 18, denied: 15, pending: 9, avgResponseDays: 8.2, medianResponseDays: 7 },
-    { platform: 'Uber', total: 38, approved: 12, denied: 19, pending: 7, avgResponseDays: 12.5, medianResponseDays: 11 },
-    { platform: 'Instacart', total: 29, approved: 17, denied: 8, pending: 4, avgResponseDays: 6.3, medianResponseDays: 6 },
-    { platform: 'Lyft', total: 24, approved: 9, denied: 11, pending: 4, avgResponseDays: 10.8, medianResponseDays: 10 },
-    { platform: 'Amazon Flex', total: 18, approved: 5, denied: 10, pending: 3, avgResponseDays: 14.2, medianResponseDays: 13 },
-    { platform: 'Grubhub', total: 15, approved: 7, denied: 5, pending: 3, avgResponseDays: 7.5, medianResponseDays: 7 },
-    { platform: 'Shipt', total: 12, approved: 6, denied: 4, pending: 2, avgResponseDays: 9.1, medianResponseDays: 8 },
-  ];
+  const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
-  const reasonCategories: ReasonData[] = [
-    { category: 'Ratings', count: 68, percentage: 38.4 },
-    { category: 'Safety', count: 45, percentage: 25.4 },
-    { category: 'Completion Rate', count: 32, percentage: 18.1 },
-    { category: 'Fraud', count: 18, percentage: 10.2 },
-    { category: 'Unknown', count: 14, percentage: 7.9 },
-  ];
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
 
-  const responseTimeBuckets = [
-    { range: '0-3 days', count: 23 },
-    { range: '4-7 days', count: 58 },
-    { range: '8-14 days', count: 67 },
-    { range: '15-21 days', count: 28 },
-    { range: '22+ days', count: 12 },
-  ];
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await fetch('http://localhost:8000/api/analytics/overview');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch analytics');
+      }
+      
+      const data = await response.json();
+      setAnalytics(data);
+    } catch (err: any) {
+      console.error('Analytics fetch error:', err);
+      setError(err.message || 'Failed to load analytics');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const totalCases = casesByPlatform.reduce((sum, p) => sum + p.total, 0);
-  const totalApproved = casesByPlatform.reduce((sum, p) => sum + p.approved, 0);
-  const totalDenied = casesByPlatform.reduce((sum, p) => sum + p.denied, 0);
-  const totalPending = casesByPlatform.reduce((sum, p) => sum + p.pending, 0);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-lg text-slate-600">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !analytics) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8 flex items-center justify-center">
+        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-8 max-w-md">
+          <AlertTriangle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+          <p className="text-red-800 text-center font-semibold mb-2">Failed to load analytics</p>
+          <p className="text-red-600 text-center text-sm mb-4">{error}</p>
+          <button
+            onClick={fetchAnalytics}
+            className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Transform API data into component format
+  const casesByPlatform: CaseData[] = Object.entries(analytics.casesByPlatform).map(([platform, total]) => ({
+    platform,
+    total,
+    approved: analytics.outcomesByPlatform[platform]?.approved || 0,
+    denied: analytics.outcomesByPlatform[platform]?.denied || 0,
+    pending: analytics.outcomesByPlatform[platform]?.pending || 0,
+    avgResponseDays: analytics.avgResponseTimeDays[platform] || 0,
+    medianResponseDays: analytics.medianResponseTimeDays[platform] || 0,
+  })).sort((a, b) => b.total - a.total);
+
+  const totalCases = analytics.summary.totalCases;
+  const reasonCategories: ReasonData[] = Object.entries(analytics.reasonDistribution).map(([category, count]) => ({
+    category,
+    count,
+    percentage: (count / totalCases) * 100,
+  })).sort((a, b) => b.count - a.count);
+
+  const responseTimeBuckets = Object.entries(analytics.responseTimeBuckets).map(([range, count]) => ({
+    range,
+    count,
+  }));
+
+  const totalApproved = analytics.summary.totalApproved;
+  const totalDenied = analytics.summary.totalDenied;
+  const totalPending = analytics.summary.totalPending;
 
   const getApprovalRate = (approved: number, denied: number) => {
     const total = approved + denied;
@@ -243,7 +319,7 @@ const AnalyticsDashboard = ({ onNavigate }: AnalyticsDashboardProps) => {
                       <span className={`font-semibold ${color.text}`}>{reason.category}</span>
                       <div className="text-right">
                         <span className={`font-bold ${color.text}`}>{reason.count}</span>
-                        <span className="text-slate-600 text-sm ml-2">({reason.percentage}%)</span>
+                        <span className="text-slate-600 text-sm ml-2">({reason.percentage.toFixed(1)}%)</span>
                       </div>
                     </div>
                     <div className="w-full bg-white/50 rounded-full h-2">
@@ -307,11 +383,19 @@ const AnalyticsDashboard = ({ onNavigate }: AnalyticsDashboardProps) => {
             <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1" />
             <div>
               <p className="font-semibold text-amber-900 mb-2">About This Data</p>
+              <p className="text-sm text-amber-800 leading-relaxed mb-2">
+                {analytics.summary.dataSource === 'simulated' && (
+                  <>This dashboard displays <strong>simulated data</strong> ({analytics.summary.simulatedCount} cases) to demonstrate aggregation capabilities. Real-world patterns vary significantly by platform, region, and case specifics.</>
+                )}
+                {analytics.summary.dataSource === 'real' && (
+                  <>This dashboard displays real case data ({totalCases} cases). Patterns vary by platform, region, and individual circumstances.</>
+                )}
+                {analytics.summary.dataSource === 'mixed' && (
+                  <>This dashboard displays a mix of real ({totalCases - analytics.summary.simulatedCount} cases) and simulated ({analytics.summary.simulatedCount} cases) data. All simulated cases are marked in the database for transparency.</>
+                )}
+              </p>
               <p className="text-sm text-amber-800 leading-relaxed">
-                Aggregated insights may include simulated data for demonstration purposes. 
-                Real-world patterns vary significantly by platform, region, and case specifics. 
-                These visualizations illustrate system capabilities for analyzing enforcement patterns 
-                across platforms, not guarantees of individual case outcomes.
+                These visualizations illustrate system capabilities for analyzing enforcement patterns across platforms, not guarantees of individual case outcomes.
               </p>
             </div>
           </div>
