@@ -13,6 +13,7 @@ import InsightsExplorer from './pages/InsightsExplorer';
 import KnowledgeBase from './pages/KnowledgeBase';
 import PolicyInsights from './pages/PolicyInsights';
 import Account from './pages/Account';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import { useAuth } from './hooks/useAuths';
 import { logout as firebaseLogout } from './services/authService';
 
@@ -69,6 +70,8 @@ function App() {
         return <Signup onNavigate={setCurrentPage} onSignup={handleSignup} />;
       case 'dashboard':
         return <Dashboard onNavigate={setCurrentPage} />;
+      case 'analytics':
+        return <AnalyticsDashboard onNavigate={setCurrentPage} />;
       case 'wizard':
         return <AppealWizard onNavigate={setCurrentPage} prefilledData={analyzerData} />;
       case 'analyzer':

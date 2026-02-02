@@ -11,7 +11,8 @@ import {
   User,
   Home,
   LogOut,
-  X
+  X,
+  TrendingUp
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -27,6 +28,7 @@ const Sidebar = ({ currentPage, onNavigate, onClose, onLogout }: SidebarProps) =
   const navItems = [
     { id: 'landing', icon: Home, label: 'Home' },
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
     { id: 'wizard', icon: FileEdit, label: 'Appeal Wizard' },
     { id: 'analyzer', icon: Search, label: 'Notice Analyzer' },
     { id: 'tracker', icon: CheckCircle, label: 'Appeal Tracker' },
