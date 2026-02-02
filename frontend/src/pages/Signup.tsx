@@ -1,9 +1,6 @@
-// frontend/src/pages/Signup.tsx (or wherever your Signup.tsx is)
-// REPLACE YOUR EXISTING FILE WITH THIS
-
 import { useState } from 'react';
-import { Mail, Lock, User, Shield, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
-import { signUp } from '../services/authService';  // NEW IMPORT
+import { Mail, Lock, User, Shield, ArrowRight, AlertCircle, CheckCircle, Phone } from 'lucide-react';
+import { signUp } from '../services/authService';
 
 interface SignupProps {
   onNavigate: (page: string) => void;
@@ -23,9 +20,18 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
 
   const passwordStrength = () => {
     if (password.length === 0) return { strength: 0, label: '', color: '' };
-    if (password.length < 6) return { strength: 33, label: 'Weak', color: 'bg-red-500' };
-    if (password.length < 10) return { strength: 66, label: 'Medium', color: 'bg-yellow-500' };
-    return { strength: 100, label: 'Strong', color: 'bg-green-500' };
+    
+    let score = 0;
+    if (password.length >= 8) score += 25;
+    if (password.length >= 12) score += 15;
+    if (/[A-Z]/.test(password)) score += 20;
+    if (/[a-z]/.test(password)) score += 20;
+    if (/[0-9]/.test(password)) score += 20;
+    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) score += 20;
+    
+    if (score < 50) return { strength: score, label: 'Weak', color: 'bg-red-500' };
+    if (score < 85) return { strength: score, label: 'Medium', color: 'bg-yellow-500' };
+    return { strength: score, label: 'Strong', color: 'bg-green-500' };
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -42,8 +48,24 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    if (password.length > 128) {
+      setError('Password must be less than 128 characters');
+      return;
+    }
+
+    // Check password complexity
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+      setError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character');
       return;
     }
 
@@ -59,13 +81,12 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
 
     setLoading(true);
 
-    // CHANGED: Now uses real Firebase auth
     try {
       const user = await signUp({ email, password, name, phoneNumber, platform });
-      onSignup(user.email!, name);
-      onNavigate('landing');
+      // Show success message about verification email
+      alert(`Account created! Please check ${email} for a verification email before logging in.`);
+      onNavigate('login');
     } catch (err: any) {
-      // Handle specific Firebase errors
       if (err.message.includes('email-already-in-use')) {
         setError('This email is already registered. Try logging in instead.');
       } else if (err.message.includes('weak-password')) {
@@ -81,12 +102,12 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
   const strength = passwordStrength();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0d9488] to-[#14b8a6] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#0f172a] to-[#1e293b] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
-            <Shield className="w-10 h-10 text-[#0d9488]" />
+            <Shield className="w-10 h-10 text-[#d4af37]" />
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">GigShield</h1>
           <p className="text-white/90 text-lg">Join thousands protecting their income</p>
@@ -94,7 +115,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
 
         {/* Signup Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-[#1e3a5f] mb-2">Create Your Account</h2>
+          <h2 className="text-2xl font-bold text-[#0f172a] mb-2">Create Your Account</h2>
           <p className="text-slate-600 mb-6">Start your free trial today - no credit card required</p>
 
           {error && (
@@ -108,7 +129,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
             {/* Full Name */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Full Name
+                Full Name *
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -125,7 +146,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Email Address
+                Email Address *
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -142,18 +163,16 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
             {/* Phone Number */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Phone Number
+                Phone Number *
               </label>
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="(555) 123-4567"
-                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent"
+                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
                 />
               </div>
             </div>
@@ -161,13 +180,12 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
             {/* Platform Selection */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Primary Platform
+                Primary Platform *
               </label>
               <select
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent outline-none bg-white"
-                required
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#d4af37] focus:border-transparent outline-none bg-white"
               >
                 <option value="">Select your platform...</option>
                 <option value="DoorDash">DoorDash</option>
@@ -186,7 +204,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Password
+                Password *
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -195,14 +213,14 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create a strong password"
-                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent"
+                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
                 />
               </div>
               {password && (
                 <div className="mt-2">
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="text-slate-600">Password strength</span>
-                    <span className={`font-medium ${strength.strength === 100 ? 'text-green-600' : strength.strength === 66 ? 'text-yellow-600' : 'text-red-600'}`}>
+                    <span className={`font-medium ${strength.strength >= 85 ? 'text-green-600' : strength.strength >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
                       {strength.label}
                     </span>
                   </div>
@@ -212,6 +230,9 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
                       style={{ width: `${strength.strength}%` }}
                     ></div>
                   </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Must be 8+ characters with uppercase, lowercase, number, and special character
+                  </p>
                 </div>
               )}
             </div>
@@ -219,7 +240,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
             {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Confirm Password
+                Confirm Password *
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -228,7 +249,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter your password"
-                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent"
+                  className="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
                 />
                 {confirmPassword && password === confirmPassword && (
                   <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-600" />
@@ -242,15 +263,15 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
                 type="checkbox"
                 checked={agreedToTerms}
                 onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="w-5 h-5 text-[#0d9488] rounded mt-0.5"
+                className="w-5 h-5 text-[#d4af37] rounded mt-0.5"
               />
               <label className="text-sm text-slate-600">
                 I agree to the{' '}
-                <button type="button" className="text-[#0d9488] hover:underline font-medium">
+                <button type="button" className="text-[#d4af37] hover:underline font-medium">
                   Terms of Service
                 </button>{' '}
                 and{' '}
-                <button type="button" className="text-[#0d9488] hover:underline font-medium">
+                <button type="button" className="text-[#d4af37] hover:underline font-medium">
                   Privacy Policy
                 </button>
               </label>
@@ -260,7 +281,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#0d9488] to-[#14b8a6] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-base hover:shadow-2xl hover:shadow-slate-400/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-[0.98] tracking-tight"
             >
               {loading ? (
                 'Creating account...'
@@ -283,7 +304,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-600" />
-                Access to Platform Policy Database
+                Access to Know Your Rights database
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-600" />
@@ -304,7 +325,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
             Already have an account?{' '}
             <button
               onClick={() => onNavigate('login')}
-              className="text-[#0d9488] hover:text-[#0d9488]/80 font-semibold"
+              className="text-[#d4af37] hover:text-[#d4af37]/80 font-semibold"
             >
               Sign in
             </button>
@@ -313,7 +334,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
 
         {/* Footer */}
         <p className="text-center text-white/70 text-sm mt-6">
-          🔒 Your data is encrypted and never shared with platforms
+          Your data is encrypted and never shared with platforms
         </p>
       </div>
     </div>

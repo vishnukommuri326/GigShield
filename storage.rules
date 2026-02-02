@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function: Check file size (max 10MB)
+    function isValidSize() {
+      return request.resource.size <= 10 * 1024 * 1024;
+    }
+    
+    // Helper function: Check if file type is allowed (images and PDFs only)
+    function isValidFileType() {
+      return request.resource.contentType.matches('image/.*') 
+        || request.resource.contentType == 'application/pdf';
+    }
+    
+    // Evidence files - stored in evidence/{userId}/{caseId}/{fileName}
+    match /evidence/{userId}/{caseId}/{fileName} {
+      // Allow read only if:
+      // 1. User is authenticated
+      // 2. User owns this evidence (userId matches)
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Allow create only if:
+      // 1. User is authenticated
+      // 2. User owns this path (userId matches)
+      // 3. File is valid size (<10MB)
+      // 4. File is valid type (image or PDF)
+      allow create: if isAuthenticated() 
+        && request.auth.uid == userId
+        && isValidSize()
+        && isValidFileType();
+      
+      // Allow delete only if user owns the file
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+      
+      // No updates - files should be immutable (delete and re-upload instead)
+      allow update: if false;
+    }
+    
+    // Deny all other access by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

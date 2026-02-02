@@ -228,7 +228,7 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
         {/* Header */}
         <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
+            <h1 className="text-4xl font-bold text-[#0f172a] mb-2">
               Appeal Tracker
             </h1>
             <p className="text-lg text-slate-600">
@@ -237,7 +237,7 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
           </div>
           <button
             onClick={() => onNavigate('wizard')}
-            className="flex items-center gap-2 px-6 py-3 bg-[#0d9488] text-white rounded-xl hover:bg-[#0d9488]/90 transition-colors font-semibold"
+            className="flex items-center gap-2 px-6 py-3 bg-[#d4af37] text-white rounded-xl hover:bg-[#d4af37]/90 transition-colors font-semibold"
           >
             <Plus className="w-5 h-5" />
             New Appeal
@@ -255,7 +255,7 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-md p-6">
             <p className="text-slate-600 text-sm mb-1">Total Appeals</p>
-            <p className="text-3xl font-bold text-[#1e3a5f]">{totalAppeals}</p>
+            <p className="text-3xl font-bold text-[#0f172a]">{totalAppeals}</p>
           </div>
           <div className="bg-white rounded-xl shadow-md p-6">
             <p className="text-slate-600 text-sm mb-1">Pending</p>
@@ -267,7 +267,7 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
           </div>
           <div className="bg-white rounded-xl shadow-md p-6">
             <p className="text-slate-600 text-sm mb-1">Approval Rate</p>
-            <p className="text-3xl font-bold text-[#0d9488]">{successRate}%</p>
+            <p className="text-3xl font-bold text-[#d4af37]">{successRate}%</p>
           </div>
         </div>
 
@@ -386,7 +386,7 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
               <div className="flex gap-3">
                 <button
                   onClick={() => setSelectedAppeal(appeal)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors text-sm font-medium"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#d4af37] text-white rounded-lg hover:bg-[#d4af37]/90 transition-colors text-sm font-medium"
                 >
                   <FileText className="w-4 h-4" />
                   View Letter
@@ -432,7 +432,7 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
             <p className="text-slate-600 mb-6">Create your first appeal using the Appeal Wizard</p>
             <button
               onClick={() => onNavigate('wizard')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#0d9488] text-white rounded-xl hover:bg-[#0d9488]/90 transition-colors font-semibold"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#d4af37] text-white rounded-xl hover:bg-[#d4af37]/90 transition-colors font-semibold"
             >
               <Plus className="w-5 h-5" />
               Create First Appeal
@@ -519,7 +519,7 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
                     navigator.clipboard.writeText(selectedAppeal.generatedLetter);
                     alert('Appeal letter copied to clipboard!');
                   }}
-                  className="mt-3 px-4 py-2 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors text-sm font-medium"
+                  className="mt-3 px-4 py-2 bg-[#d4af37] text-white rounded-lg hover:bg-[#d4af37]/90 transition-colors text-sm font-medium"
                 >
                   Copy Letter
                 </button>

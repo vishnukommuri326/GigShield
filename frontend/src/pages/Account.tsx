@@ -1,4 +1,4 @@
-import { User, Mail, Lock, Bell, CreditCard, LogOut, Check, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, Bell, LogOut, Check, AlertCircle, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuths';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -32,6 +32,13 @@ const Account = ({ onNavigate }: AccountProps) => {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
 
   // Get platform-specific account ID label
   const getPlatformAccountIdLabel = () => {
@@ -121,6 +128,61 @@ const Account = ({ onNavigate }: AccountProps) => {
     }
   };
 
+  const handlePasswordChange = async () => {
+    if (!user) return;
+
+    // Validation
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setError('All password fields are required');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setError('New password must be at least 6 characters');
+      return;
+    }
+
+    setChangingPassword(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const { EmailAuthProvider, reauthenticateWithCredential, updatePassword } = await import('firebase/auth');
+      
+      // Re-authenticate user with current password
+      const credential = EmailAuthProvider.credential(
+        user.email!,
+        passwordData.currentPassword
+      );
+      
+      await reauthenticateWithCredential(user, credential);
+      
+      // Update password
+      await updatePassword(user, passwordData.newPassword);
+      
+      setSuccess('Password changed successfully!');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowPasswordChange(false);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Error changing password:', err);
+      if (err.code === 'auth/wrong-password') {
+        setError('Current password is incorrect');
+      } else if (err.code === 'auth/weak-password') {
+        setError('New password is too weak');
+      } else {
+        setError('Failed to change password. Please try again.');
+      }
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (!user) return;
 
@@ -149,14 +211,14 @@ const Account = ({ onNavigate }: AccountProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      <div className="max-w-5xl mx-auto p-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
+        <div className="mb-10 animate-fadeIn">
+          <h1 className="text-5xl font-extrabold text-[#0f172a] mb-3 tracking-tight">
             Account Settings
           </h1>
-          <p className="text-lg text-slate-600">
+          <p className="text-slate-600 text-xl font-medium">
             Manage your profile and preferences
           </p>
         </div>
@@ -178,7 +240,7 @@ const Account = ({ onNavigate }: AccountProps) => {
           )}
 
           <div className="flex items-center gap-6 mb-6">
-            <div className="w-24 h-24 bg-gradient-to-br from-[#1e3a5f] to-[#0d9488] rounded-full flex items-center justify-center">
+            <div className="w-24 h-24 bg-[#0f172a] rounded-full flex items-center justify-center">
               <User className="w-12 h-12 text-white" />
             </div>
             <div>
@@ -255,7 +317,7 @@ const Account = ({ onNavigate }: AccountProps) => {
                 onChange={(e) => setProfile({...profile, platformAccountId: e.target.value})}
                 placeholder={profile.platform ? `e.g., ${getPlatformAccountIdLabel()}: ABC-123456` : 'Select a platform first'}
                 disabled={!profile.platform}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#d4af37] focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500"
               />
               <p className="text-xs text-slate-500 mt-1">
                 {profile.platform 
@@ -270,7 +332,7 @@ const Account = ({ onNavigate }: AccountProps) => {
             <button 
               onClick={handleSave}
               disabled={saving}
-              className="px-6 py-3 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-8 py-3.5 bg-gradient-to-r from-[#d4af37] to-[#f4d03f] text-[#0f172a] rounded-xl hover:shadow-xl hover:shadow-[#d4af37]/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold transform hover:scale-105 active:scale-95"
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
@@ -282,17 +344,16 @@ const Account = ({ onNavigate }: AccountProps) => {
           {/* Security */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center gap-3 mb-4">
-              <Lock className="w-6 h-6 text-[#0d9488]" />
+              <Lock className="w-6 h-6 text-[#d4af37]" />
               <h3 className="text-xl font-bold text-slate-800">Security</h3>
             </div>
             <div className="space-y-4">
-              <button className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors">
+              <button 
+                onClick={() => setShowPasswordChange(true)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
+              >
                 <span className="text-slate-700">Change Password</span>
-                <span className="text-[#0d9488]">→</span>
-              </button>
-              <button className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors">
-                <span className="text-slate-700">Enable Two-Factor Authentication</span>
-                <span className="text-[#0d9488]">→</span>
+                <span className="text-[#d4af37]">→</span>
               </button>
             </div>
           </div>
@@ -300,7 +361,7 @@ const Account = ({ onNavigate }: AccountProps) => {
           {/* Notifications */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center gap-3 mb-4">
-              <Bell className="w-6 h-6 text-[#0d9488]" />
+              <Bell className="w-6 h-6 text-[#d4af37]" />
               <h3 className="text-xl font-bold text-slate-800">Notifications</h3>
             </div>
             <div className="space-y-4">
@@ -321,26 +382,10 @@ const Account = ({ onNavigate }: AccountProps) => {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" className="sr-only peer" defaultChecked />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#0d9488]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0d9488]"></div>
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#d4af37]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#d4af37]"></div>
                 </label>
               </div>
             </div>
-          </div>
-
-          {/* Subscription */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <CreditCard className="w-6 h-6 text-[#0d9488]" />
-              <h3 className="text-xl font-bold text-slate-800">Subscription</h3>
-            </div>
-            <div className="p-4 bg-gradient-to-r from-[#1e3a5f] to-[#0d9488] rounded-lg text-white mb-4">
-              <p className="text-sm opacity-90 mb-1">Current Plan</p>
-              <p className="text-2xl font-bold">Free Trial</p>
-              <p className="text-sm opacity-90 mt-2">14 days remaining</p>
-            </div>
-            <button className="w-full py-3 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors font-semibold">
-              Upgrade to Premium
-            </button>
           </div>
 
           {/* Danger Zone */}
@@ -389,6 +434,89 @@ const Account = ({ onNavigate }: AccountProps) => {
           </div>
         </div>
       </div>
+
+      {/* Password Change Modal */}
+      {showPasswordChange && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-slate-800">Change Password</h3>
+              <button
+                onClick={() => {
+                  setShowPasswordChange(false);
+                  setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setError('');
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
+                  placeholder="Enter current password"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
+                  placeholder="Enter new password (min. 6 characters)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
+                  placeholder="Re-enter new password"
+                />
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowPasswordChange(false);
+                    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                    setError('');
+                  }}
+                  className="flex-1 px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors font-medium"
+                  disabled={changingPassword}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePasswordChange}
+                  disabled={changingPassword}
+                  className="flex-1 px-4 py-3 bg-[#d4af37] hover:bg-[#d4af37]/90 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {changingPassword ? 'Changing...' : 'Change Password'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

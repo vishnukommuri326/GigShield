@@ -28,6 +28,7 @@ interface UploadedFile {
   url: string;
   filename: string;
   contentType: string;
+  file?: File;  // Store original File object
 }
 
 const AppealWizard = ({ onNavigate, prefilledData }: AppealWizardProps) => {
@@ -513,6 +514,24 @@ const AppealWizard = ({ onNavigate, prefilledData }: AppealWizardProps) => {
       setGeneratedLetter(result.appeal_letter);
       setAppealId(result.appeal_id);
       
+      // Re-upload files with the actual case_id to attach them properly
+      try {
+        if (uploadedNoticeFile && uploadedNoticeFile.file) {
+          await uploadEvidence(uploadedNoticeFile.file, result.appeal_id);
+          console.log('✓ Attached notice file to case:', result.appeal_id);
+        }
+        
+        for (const uploadedFile of uploadedFiles) {
+          if (uploadedFile.file) {
+            await uploadEvidence(uploadedFile.file, result.appeal_id);
+            console.log('✓ Attached evidence file to case:', uploadedFile.filename);
+          }
+        }
+      } catch (fileErr) {
+        console.warn('Warning: Could not attach all files to case:', fileErr);
+        // Don't fail the whole process if file attachment fails
+      }
+      
       // Move to step 4 to show the generated letter
       setCurrentStep(4);
       
@@ -580,11 +599,12 @@ const AppealWizard = ({ onNavigate, prefilledData }: AppealWizardProps) => {
       // Upload file
       const result = await uploadEvidence(file);
       
-      // Set uploaded notice file
+      // Set uploaded notice file with original File object
       setUploadedNoticeFile({
         url: result.url,
         filename: result.filename,
-        contentType: result.contentType
+        contentType: result.contentType,
+        file: file  // Store original
       });
 
       // Clear file input
@@ -631,11 +651,12 @@ const AppealWizard = ({ onNavigate, prefilledData }: AppealWizardProps) => {
       // Upload file
       const result = await uploadEvidence(file);
       
-      // Add to uploaded files list
+      // Add to uploaded files list with original File object
       setUploadedFiles([...uploadedFiles, {
         url: result.url,
         filename: result.filename,
-        contentType: result.contentType
+        contentType: result.contentType,
+        file: file  // Store original
       }]);
 
       // Clear file input

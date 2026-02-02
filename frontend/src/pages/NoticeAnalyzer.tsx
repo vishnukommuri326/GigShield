@@ -305,7 +305,7 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
+          <h1 className="text-4xl font-bold text-[#0f172a] mb-2">
             Notice Analyzer
           </h1>
           <p className="text-lg text-slate-600">
@@ -316,7 +316,7 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
         {/* Upload Section */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
           {!uploadedFile ? (
-            <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center hover:border-[#0d9488] transition-colors">
+            <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center hover:border-[#d4af37] transition-colors">
               <Upload className="w-16 h-16 text-slate-400 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-slate-700 mb-2">
                 Upload Your Deactivation Notice
@@ -324,7 +324,7 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
               <p className="text-slate-500 mb-4">
                 Drop your PDF, image, or screenshot here, or click to browse
               </p>
-              <label className="inline-block px-6 py-3 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors cursor-pointer">
+              <label className="inline-block px-6 py-3 bg-[#d4af37] text-white rounded-lg hover:bg-[#d4af37]/90 transition-colors cursor-pointer">
                 <input
                   type="file"
                   onChange={handleFileUpload}
@@ -389,7 +389,7 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
             <textarea
               value={noticeText}
               onChange={(e) => setNoticeText(e.target.value)}
-              className="w-full h-32 px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0d9488] focus:border-transparent resize-none"
+              className="w-full h-32 px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-[#d4af37] focus:border-transparent resize-none"
               placeholder="Paste your deactivation notice here..."
             />
           </div>
@@ -408,7 +408,7 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
           <button 
             onClick={() => analyzeNotice()}
             disabled={(!noticeText.trim() && !uploadedFile) || isAnalyzing}
-            className="mt-4 w-full py-4 bg-gradient-to-r from-[#1e3a5f] to-[#0d9488] text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="mt-4 w-full py-4 bg-[#0f172a] text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isAnalyzing ? (
               <>
@@ -585,7 +585,7 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
 
             {/* Detailed Analysis */}
             <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-[#1e3a5f] mb-6 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-[#0f172a] mb-6 flex items-center gap-2">
                 <Info className="w-7 h-7" />
                 Analysis Summary
               </h2>
