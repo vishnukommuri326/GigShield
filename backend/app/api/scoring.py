@@ -95,9 +95,10 @@ async def get_case_score(case_id: str):
         case_data = case_doc.to_dict()
         
         # Extract fields
-        reason = case_data.get('reason', '')
+        reason = case_data.get('reason') or case_data.get('deactivationReason', '')
         status = case_data.get('status', 'pending')
-        evidence_count = len(case_data.get('evidence', []))
+        evidence = case_data.get('evidence', [])
+        evidence_count = len(evidence) if isinstance(evidence, list) else 0
         prior_appeal_count = case_data.get('priorAppealCount', 0)
         
         # Handle timestamps

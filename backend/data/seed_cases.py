@@ -109,19 +109,45 @@ I respectfully request reconsideration of this deactivation.
 Thank you for your time.
 """
     
+    # Generate random evidence count (0-5 documents)
+    # More evidence for approved cases, less for denied
+    if status == 'approved':
+        evidence_count = random.randint(2, 5)
+    elif status == 'denied':
+        evidence_count = random.randint(0, 2)
+    else:  # pending
+        evidence_count = random.randint(1, 3)
+    
+    evidence_list = []
+    evidence_types = ['Screenshot', 'GPS Log', 'Photo', 'Email', 'Text Message', 'Receipt']
+    for i in range(evidence_count):
+        evidence_list.append({
+            'type': random.choice(evidence_types),
+            'url': f'https://storage.example.com/evidence_{index}_{i}.jpg',
+            'uploadedAt': created_at.isoformat()
+        })
+    
+    # Determine deactivation timestamp (before appeal was created)
+    deactivation_days_before = random.randint(1, 5)
+    deactivated_at = created_at - timedelta(days=deactivation_days_before)
+    
     # Build case document
     case = {
         'platform': platform,
-        'reason': reason,
+        'reason': reason,  # This is the actual reason text
+        'deactivationReason': reason,  # Alias for frontend
         'category': category,
         'deactivationNotice': f'{platform} deactivation notice - {reason}',
         'userStory': f'Simulated case #{index} for {platform}',
-        'evidence': 'Screenshots and documentation',
+        'evidence': evidence_list,  # Array of evidence objects
         'appealLetter': appeal_letter,
         'status': status,
         'appealDeadline': appeal_deadline.isoformat(),
         'createdAt': created_at.isoformat(),
+        'deactivatedAt': deactivated_at.isoformat(),  # When account was deactivated
+        'submittedAt': created_at.isoformat() if status != 'pending' else None,  # When appeal submitted
         'lastUpdated': last_updated.isoformat(),
+        'priorAppealCount': random.randint(0, 2) if random.random() < 0.15 else 0,  # 15% have prior appeals
         'isSimulated': True,  # KEY FLAG
         'userId': f'simulated_user_{index}',
     }
