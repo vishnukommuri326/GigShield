@@ -42,6 +42,11 @@ interface AnalyticsResponse {
   medianResponseTimeDays: { [key: string]: number };
   responseTimeBuckets: { [key: string]: number };
   reasonDistribution: { [key: string]: number };
+  scoreDistribution: {
+    low: number;
+    medium: number;
+    high: number;
+  };
 }
 
 const AnalyticsDashboard = ({ onNavigate }: AnalyticsDashboardProps) => {
@@ -336,6 +341,84 @@ const AnalyticsDashboard = ({ onNavigate }: AnalyticsDashboardProps) => {
               "Unknown" category reflects cases where specific reason was unclear or not disclosed
             </p>
           </div>
+
+          {/* 5. Score Distribution */}
+          {analytics.scoreDistribution && (
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl shadow-md p-6 border-2 border-indigo-200">
+              <h2 className="text-xl font-bold text-indigo-900 mb-6 flex items-center gap-2">
+                <TrendingUp className="w-6 h-6" />
+                Case Strength Score Distribution
+              </h2>
+              
+              <div className="space-y-4">
+                {/* High Scores */}
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="font-semibold text-green-900">High (70-100)</span>
+                    </div>
+                    <span className="text-2xl font-bold text-green-600">{analytics.scoreDistribution.high}</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-3">
+                    <div
+                      className="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all"
+                      style={{ width: `${(analytics.scoreDistribution.high / totalCases) * 100}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-2">
+                    {((analytics.scoreDistribution.high / totalCases) * 100).toFixed(1)}% of cases
+                  </p>
+                </div>
+
+                {/* Medium Scores */}
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <MinusCircle className="w-5 h-5 text-yellow-600" />
+                      <span className="font-semibold text-yellow-900">Medium (40-69)</span>
+                    </div>
+                    <span className="text-2xl font-bold text-yellow-600">{analytics.scoreDistribution.medium}</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-3">
+                    <div
+                      className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-3 rounded-full transition-all"
+                      style={{ width: `${(analytics.scoreDistribution.medium / totalCases) * 100}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-2">
+                    {((analytics.scoreDistribution.medium / totalCases) * 100).toFixed(1)}% of cases
+                  </p>
+                </div>
+
+                {/* Low Scores */}
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <XCircle className="w-5 h-5 text-red-600" />
+                      <span className="font-semibold text-red-900">Low (0-39)</span>
+                    </div>
+                    <span className="text-2xl font-bold text-red-600">{analytics.scoreDistribution.low}</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-3">
+                    <div
+                      className="bg-gradient-to-r from-red-400 to-red-600 h-3 rounded-full transition-all"
+                      style={{ width: `${(analytics.scoreDistribution.low / totalCases) * 100}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-2">
+                    {((analytics.scoreDistribution.low / totalCases) * 100).toFixed(1)}% of cases
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-indigo-100 rounded-lg">
+                <p className="text-sm text-indigo-900">
+                  <strong>About scores:</strong> These are computed using rule-based factors (category, evidence, timing) and reflect case characteristics, not outcome predictions.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Platform Response Time Details */}
