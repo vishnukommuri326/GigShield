@@ -81,6 +81,90 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
     return 'moderate';
   };
 
+  // Explainable probability scoring (rule-based, not predictive)
+  const calculateAppealLikelihood = (result: AnalysisResult | null) => {
+    if (!result) return null;
+
+    let score = 50; // Baseline
+    const factors: Array<{ text: string; impact: number; positive: boolean }> = [];
+
+    // Factor 1: Violation category
+    const categoryLower = result.category.toLowerCase();
+    if (categoryLower.includes('rating') || categoryLower.includes('performance')) {
+      score += 15;
+      factors.push({ text: 'Performance-based deactivation (typically reviewable)', impact: 15, positive: true });
+    } else if (categoryLower.includes('safety') || categoryLower.includes('fraud')) {
+      score -= 25;
+      factors.push({ text: 'Safety/fraud flag (requires strong counter-evidence)', impact: -25, positive: false });
+    } else if (categoryLower.includes('completion')) {
+      score += 10;
+      factors.push({ text: 'Completion rate issue (documentable)', impact: 10, positive: true });
+    }
+
+    // Factor 2: Missing information
+    if (result.missingInfo.length === 0) {
+      score += 20;
+      factors.push({ text: 'All key information identified', impact: 20, positive: true });
+    } else if (result.missingInfo.length > 3) {
+      score -= 15;
+      factors.push({ text: `${result.missingInfo.length} critical details unclear`, impact: -15, positive: false });
+    } else {
+      score -= 5;
+      factors.push({ text: `${result.missingInfo.length} minor gaps in notice`, impact: -5, positive: false });
+    }
+
+    // Factor 3: Appeal timing
+    if (result.daysRemaining > 14) {
+      score += 10;
+      factors.push({ text: 'Ample time to gather evidence', impact: 10, positive: true });
+    } else if (result.daysRemaining < 3) {
+      score -= 10;
+      factors.push({ text: 'Very limited time to respond', impact: -10, positive: false });
+    }
+
+    // Factor 4: Platform (based on observed patterns)
+    const platformLower = result.platform.toLowerCase();
+    if (platformLower.includes('instacart')) {
+      score += 8;
+      factors.push({ text: 'Platform has structured appeal process', impact: 8, positive: true });
+    } else if (platformLower.includes('amazon')) {
+      score -= 12;
+      factors.push({ text: 'Platform has historically limited review', impact: -12, positive: false });
+    }
+
+    // Clamp score to 0-100
+    score = Math.max(0, Math.min(100, score));
+
+    // Determine likelihood band
+    let likelihood: 'Low' | 'Medium' | 'High';
+    let confidenceBand: string;
+    let bandColor: string;
+
+    if (score >= 65) {
+      likelihood = 'High';
+      confidenceBand = '65-85%';
+      bandColor = 'text-green-700 bg-green-50 border-green-300';
+    } else if (score >= 40) {
+      likelihood = 'Medium';
+      confidenceBand = '40-65%';
+      bandColor = 'text-yellow-700 bg-yellow-50 border-yellow-300';
+    } else {
+      likelihood = 'Low';
+      confidenceBand = '15-40%';
+      bandColor = 'text-red-700 bg-red-50 border-red-300';
+    }
+
+    return {
+      score,
+      likelihood,
+      confidenceBand,
+      bandColor,
+      factors
+    };
+  };
+
+  const appealScore = calculateAppealLikelihood(analysisResult);
+
   const detectPlatform = (text: string): string => {
     const lower = text.toLowerCase();
     if (lower.includes('doordash') || lower.includes('dasher')) return 'DoorDash';
@@ -419,6 +503,77 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
                     </div>
                   </div>
                 </div>
+
+                {/* Explainable Probability Scoring */}
+                {appealScore && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-blue-600" />
+                      Appeal Likelihood Assessment
+                    </h3>
+                    
+                    {/* Likelihood Band */}
+                    <div className={`border-2 rounded-xl p-6 mb-4 ${appealScore.bandColor}`}>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-sm font-semibold uppercase mb-1">Estimated Likelihood</p>
+                          <p className="text-3xl font-bold">{appealScore.likelihood}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold mb-1">Confidence Band</p>
+                          <p className="text-2xl font-bold">{appealScore.confidenceBand}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Score Bar */}
+                      <div className="relative">
+                        <div className="w-full bg-white/50 rounded-full h-3 mb-2">
+                          <div
+                            className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all"
+                            style={{ width: `${appealScore.score}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between text-xs font-medium">
+                          <span>Low (0-40)</span>
+                          <span>Medium (40-65)</span>
+                          <span>High (65-100)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Factors Breakdown */}
+                    <div className="bg-slate-50 rounded-xl p-5 space-y-3">
+                      <p className="text-sm font-semibold text-slate-700 mb-2">Factors Considered:</p>
+                      {appealScore.factors.map((factor, index) => (
+                        <div key={index} className="flex items-start gap-3">
+                          {factor.positive ? (
+                            <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                          )}
+                          <div className="flex-1">
+                            <span className="text-slate-800">{factor.text}</span>
+                            <span className={`ml-2 text-sm font-semibold ${factor.positive ? 'text-green-700' : 'text-red-700'}`}>
+                              ({factor.impact > 0 ? '+' : ''}{factor.impact} points)
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Disclaimer */}
+                    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mt-4">
+                      <p className="text-sm text-blue-900 font-semibold mb-1">
+                        ⚠️ This is NOT a prediction
+                      </p>
+                      <p className="text-sm text-blue-800">
+                        This assessment uses rule-based logic to estimate relative appeal strength based on observed patterns. 
+                        It is not a guarantee, legal advice, or statistical prediction of your specific outcome. 
+                        Actual results depend on evidence quality, platform-specific processes, and case details.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Missing Information */}
                 <div>
