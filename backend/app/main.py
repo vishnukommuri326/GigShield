@@ -15,6 +15,7 @@ from app.core import firebase
 # Import routers
 from app.api.appeals import router as appeals_router
 from app.api.analytics import router as analytics_router
+from app.api.scoring import router as scoring_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -42,6 +43,7 @@ app.add_middleware(
 # Include routers
 app.include_router(appeals_router)
 app.include_router(analytics_router, prefix="/api")
+app.include_router(scoring_router, prefix="/api")
 
 @app.get("/")
 async def root():

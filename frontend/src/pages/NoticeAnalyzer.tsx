@@ -23,6 +23,7 @@ interface AnalysisResult {
   riskLevel: 'easy' | 'moderate' | 'difficult';
   successRate: number;
   extracted: boolean;
+  caseId?: string;
 }
 
 const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps) => {
@@ -33,6 +34,8 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string>('');
   const [isExtracting, setIsExtracting] = useState(false);
+  const [caseScore, setCaseScore] = useState<any>(null);
+  const [isLoadingScore, setIsLoadingScore] = useState(false);
 
   // Real API call to backend
   const analyzeNotice = async (textToAnalyze?: string) => {
@@ -71,6 +74,23 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
       setError(err.message || 'Failed to analyze notice. Please try again.');
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  // Fetch case score from backend
+  const fetchCaseScore = async (caseId: string) => {
+    setIsLoadingScore(true);
+    try {
+      const response = await fetch(`http://localhost:8000/api/cases/${caseId}/score`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch score');
+      }
+      const scoreData = await response.json();
+      setCaseScore(scoreData);
+    } catch (err) {
+      console.error('Error fetching score:', err);
+    } finally {
+      setIsLoadingScore(false);
     }
   };
 
@@ -460,6 +480,108 @@ const NoticeAnalyzer = ({ onNavigate, onAnalysisComplete }: NoticeAnalyzerProps)
                 </div>
               )}
             </div>
+
+            {/* Case Score Section - Only shown if we have a caseId */}
+            {analysisResult.caseId && (
+              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl shadow-lg p-8 border-2 border-indigo-200">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-indigo-900 flex items-center gap-2">
+                    <Sparkles className="w-7 h-7" />
+                    Case Strength Score
+                  </h2>
+                  {!caseScore && (
+                    <button
+                      onClick={() => fetchCaseScore(analysisResult.caseId!)}
+                      disabled={isLoadingScore}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {isLoadingScore ? 'Computing...' : 'Compute Score'}
+                    </button>
+                  )}
+                </div>
+
+                {caseScore && (
+                  <div className="space-y-6">
+                    {/* Score Display */}
+                    <div className="flex items-center gap-8">
+                      <div className="relative">
+                        <div className="w-32 h-32 rounded-full flex items-center justify-center bg-white shadow-lg">
+                          <div className={`text-5xl font-bold ${
+                            caseScore.label === 'high' ? 'text-green-600' :
+                            caseScore.label === 'medium' ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`}>
+                            {caseScore.score}
+                          </div>
+                        </div>
+                        <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white ${
+                          caseScore.label === 'high' ? 'bg-green-600' :
+                          caseScore.label === 'medium' ? 'bg-yellow-600' :
+                          'bg-red-600'
+                        }`}>
+                          {caseScore.label.toUpperCase()}
+                        </div>
+                      </div>
+
+                      <div className="flex-1">
+                        <p className="text-lg text-indigo-900 mb-2">
+                          This score is based on <strong>{caseScore.factors.length} weighted factors</strong> including violation category, evidence quality, and timing.
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-indigo-700">
+                          <Info className="w-4 h-4" />
+                          <span>Score range: {caseScore.band[0]} to {caseScore.band[1]}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Top Factors */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-indigo-900 mb-4">Key Factors Affecting Your Score:</h3>
+                      <div className="space-y-3">
+                        {caseScore.factors.slice(0, 3).map((factor: any, index: number) => (
+                          <div key={index} className="bg-white rounded-lg p-4 shadow-sm border border-indigo-100">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-semibold text-slate-900">{factor.name}</span>
+                              <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                                factor.impact > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                                {factor.impact > 0 ? '+' : ''}{factor.impact}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600">{factor.explanation}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Metadata */}
+                    <div className="bg-white/50 rounded-lg p-4 text-sm text-indigo-800">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <span className="font-semibold">Category:</span> {caseScore.metadata.category}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Evidence:</span> {caseScore.metadata.evidenceCount} docs
+                        </div>
+                        <div>
+                          <span className="font-semibold">Days since:</span> {caseScore.metadata.daysSinceDeactivation}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Status:</span> {caseScore.metadata.status}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-amber-900">
+                        <strong>Important:</strong> This score reflects case characteristics based on documented patterns, not a guarantee of outcome. Every appeal is reviewed individually by platform teams.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Detailed Analysis */}
             <div className="bg-white rounded-2xl shadow-lg p-8">

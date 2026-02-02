@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any
 from ..core.firebase import db
 from collections import defaultdict
+from .scoring import categorize_reason, CATEGORY_WEIGHTS, score_evidence_count
 
 router = APIRouter()
 
@@ -33,6 +34,7 @@ async def get_analytics_overview():
         })
         response_times_by_platform = defaultdict(list)
         reason_distribution = defaultdict(int)
+        score_distribution = {'low': 0, 'medium': 0, 'high': 0}
         
         total_cases = 0
         simulated_count = 0
@@ -41,19 +43,50 @@ async def get_analytics_overview():
         for appeal in appeals:
             data = appeal.to_dict()
             platform = data.get('platform', 'Unknown')
+            
+            # Normalize platform names (handle inconsistent capitalization)
+            platform_normalized = platform.strip().title()
+            # Fix specific platforms
+            if platform_normalized == 'Doordash':
+                platform_normalized = 'DoorDash'
+            elif platform_normalized == 'Grubhub':
+                platform_normalized = 'Grubhub'
+            elif platform_normalized == 'Amazon Flex':
+                platform_normalized = 'Amazon Flex'
+            
             status = data.get('status', 'pending')
             reason = data.get('reason', '')
             is_simulated = data.get('isSimulated', False)
+            evidence_count = len(data.get('evidence', []))
+            prior_appeal_count = data.get('priorAppealCount', 0)
             
             # Count cases
             total_cases += 1
-            cases_by_platform[platform] += 1
+            cases_by_platform[platform_normalized] += 1
             if is_simulated:
                 simulated_count += 1
             
+            # Compute score for distribution (same logic as scoring endpoint)
+            base_score = 50
+            category = categorize_reason(reason)
+            category_impact = CATEGORY_WEIGHTS.get(category, 0)
+            evidence_impact, _ = score_evidence_count(evidence_count)
+            status_impact = -15 if (status.lower() == 'denied' and prior_appeal_count > 0) else 0
+            
+            total_impact = category_impact + evidence_impact + status_impact
+            final_score = max(0, min(100, base_score + total_impact))
+            
+            # Categorize score
+            if final_score < 40:
+                score_distribution['low'] += 1
+            elif final_score < 70:
+                score_distribution['medium'] += 1
+            else:
+                score_distribution['high'] += 1
+            
             # Count outcomes
             if status in ['approved', 'denied', 'pending']:
-                outcomes_by_platform[platform][status] += 1
+                outcomes_by_platform[platform_normalized][status] += 1
             
             # Calculate response time for resolved cases
             if status in ['approved', 'denied']:
@@ -74,7 +107,7 @@ async def get_analytics_overview():
                     
                     response_days = (updated_dt - created_dt).days
                     if response_days >= 0:  # Sanity check
-                        response_times_by_platform[platform].append(response_days)
+                        response_times_by_platform[platform_normalized].append(response_days)
             
             # Categorize reasons
             reason_lower = reason.lower()
@@ -138,7 +171,8 @@ async def get_analytics_overview():
             "avgResponseTimeDays": avg_response_times,
             "medianResponseTimeDays": median_response_times,
             "responseTimeBuckets": response_time_buckets,
-            "reasonDistribution": dict(reason_distribution)
+            "reasonDistribution": dict(reason_distribution),
+            "scoreDistribution": score_distribution
         }
         
     except Exception as e:
