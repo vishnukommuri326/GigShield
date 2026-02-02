@@ -1,36 +1,36 @@
-import { ArrowLeft, FileText, Scale, MapPin, Info, AlertCircle } from 'lucide-react';
+import { ArrowLeft, FileText, AlertCircle, Database, TrendingUp } from 'lucide-react';
 
-interface RightsProps {
+interface PolicyInsightsProps {
   onNavigate: (page: string) => void;
 }
 
-const Rights = ({ onNavigate }: RightsProps) => {
-  const rights = [
+const PolicyInsights = ({ onNavigate }: PolicyInsightsProps) => {
+  const insights = [
     {
       icon: FileText,
-      title: 'Right to Explanation',
-      description: 'Many states now require platforms to provide specific reasons for deactivation.',
+      title: 'Deactivation Reasons',
+      description: 'Platforms typically cite ratings, completion rates, safety flags, or contract violations. Specificity varies widely.',
       color: 'bg-blue-100',
       iconColor: 'text-blue-600',
     },
     {
-      icon: Scale,
-      title: 'Right to Appeal',
-      description: 'You have the right to contest deactivations and request human review in most cases.',
+      icon: AlertCircle,
+      title: 'Appeal Mechanisms',
+      description: 'Most platforms offer internal appeal processes. Response times and review depth differ significantly by platform.',
       color: 'bg-purple-100',
       iconColor: 'text-purple-600',
     },
     {
-      icon: MapPin,
-      title: 'State Protections',
-      description: 'California, Seattle, NYC, and other areas have specific gig worker protections.',
+      icon: Database,
+      title: 'Policy Variations',
+      description: 'Some jurisdictions require specific disclosures or human review processes. Enforcement varies.',
       color: 'bg-green-100',
       iconColor: 'text-green-600',
     },
     {
-      icon: Info,
-      title: 'Documentation Rights',
-      description: 'You can request the platform\'s evidence against you in many jurisdictions.',
+      icon: TrendingUp,
+      title: 'Platform Trends',
+      description: 'Observed patterns in deactivation categories, appeal response rates, and policy updates across platforms.',
       color: 'bg-amber-100',
       iconColor: 'text-amber-600',
     },
@@ -55,45 +55,45 @@ const Rights = ({ onNavigate }: RightsProps) => {
       <div className="max-w-5xl mx-auto px-6 py-16">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-slate-900 mb-4">
-            Know Your Rights
+            Platform Policy Insights
           </h1>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-            Gig workers have more protections than platforms want you to know.
+            Understanding enforcement patterns across gig platforms
           </p>
         </div>
 
-        {/* Rights Cards */}
+        {/* Insights Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          {rights.map((right, index) => {
-            const Icon = right.icon;
+          {insights.map((insight, index) => {
+            const Icon = insight.icon;
             return (
               <div
                 key={index}
                 className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all border border-slate-200"
               >
-                <div className={`${right.color} ${right.iconColor} w-14 h-14 rounded-xl flex items-center justify-center mb-4`}>
+                <div className={`${insight.color} ${insight.iconColor} w-14 h-14 rounded-xl flex items-center justify-center mb-4`}>
                   <Icon className="w-7 h-7" />
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 mb-3">
-                  {right.title}
+                  {insight.title}
                 </h3>
                 <p className="text-slate-600 leading-relaxed">
-                  {right.description}
+                  {insight.description}
                 </p>
               </div>
             );
           })}
         </div>
 
-        {/* News Banner */}
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl p-6 flex items-start gap-4">
-          <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1" />
+        {/* Info Banner */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6 flex items-start gap-4">
+          <AlertCircle className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
           <div>
-            <p className="text-amber-900 font-semibold mb-1">
-              New: Seattle passed landmark deactivation protections in 2025
+            <p className="text-blue-900 font-semibold mb-1">
+              Policy transparency requirements evolving
             </p>
-            <p className="text-amber-800 text-sm">
-              More cities and states are recognizing gig workers' right to fair treatment and due process.
+            <p className="text-blue-800 text-sm">
+              Some jurisdictions now mandate specific disclosures for platform deactivations. This system aggregates observed patterns.
             </p>
           </div>
         </div>
@@ -101,16 +101,16 @@ const Rights = ({ onNavigate }: RightsProps) => {
         {/* CTA Section */}
         <div className="mt-16 text-center bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl p-12 text-white">
           <h2 className="text-3xl font-bold mb-4">
-            Ready to Fight Back?
+            Analyze Your Case
           </h2>
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Use GigShield's free AI-powered tool to understand your deactivation and generate a professional appeal letter.
+            Use GigShield's structured analysis tool to understand your deactivation and prepare an organized appeal.
           </p>
           <button
             onClick={() => onNavigate('wizard')}
             className="bg-white text-blue-600 px-8 py-4 rounded-lg font-bold text-lg hover:bg-blue-50 transition-colors shadow-lg"
           >
-            Start Your Appeal Now
+            Start Analysis
           </button>
         </div>
       </div>
@@ -118,4 +118,4 @@ const Rights = ({ onNavigate }: RightsProps) => {
   );
 };
 
-export default Rights;
+export default PolicyInsights;

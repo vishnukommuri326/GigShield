@@ -58,9 +58,9 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
     },
     {
       icon: TrendingUp,
-      value: '60%',
-      label: 'Appeal success rate',
-      subtext: 'when properly documented',
+      value: 'Varies',
+      label: 'Outcomes by platform',
+      subtext: 'success depends on case specifics',
     },
   ];
 
@@ -75,7 +75,7 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
       number: 2,
       icon: Search,
       title: 'We Analyze',
-      description: 'Our AI identifies the deactivation reason, deadline, and your platform-specific rights.',
+      description: 'Our AI identifies the deactivation reason, deadline, and relevant platform policies.',
     },
     {
       number: 3,
@@ -126,10 +126,10 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
               Platforms
             </a>
             <button 
-              onClick={() => onNavigate('rights')}
+              onClick={() => onNavigate('policy-insights')}
               className="text-slate-600 hover:text-slate-900 transition-colors"
             >
-              Know Your Rights
+              Policy Insights
             </button>
           </nav>
           <div className="flex items-center gap-4">
@@ -271,7 +271,7 @@ const LandingPage = ({ onNavigate }: LandingPageProps) => {
 
         <p className="text-xl text-slate-600 max-w-3xl mx-auto mb-10 leading-relaxed">
           Gig platforms deactivate workers with vague explanations and opaque processes. 
-          GigShield helps you understand your rights and craft winning appeals — for free.
+          GigShield helps you understand platform policies and craft structured appeals — for free.
         </p>
 
         <div className="flex items-center justify-center gap-4 mb-12">

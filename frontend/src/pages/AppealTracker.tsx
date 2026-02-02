@@ -240,7 +240,7 @@ const AppealTracker = ({ onNavigate }: AppealTrackerProps) => {
             <p className="text-3xl font-bold text-green-600">{approvedAppeals}</p>
           </div>
           <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-slate-600 text-sm mb-1">Success Rate</p>
+            <p className="text-slate-600 text-sm mb-1">Approval Rate</p>
             <p className="text-3xl font-bold text-[#0d9488]">{successRate}%</p>
           </div>
         </div>
