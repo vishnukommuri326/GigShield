@@ -40,7 +40,7 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
 
   const tipOfTheDay = {
     title: "Did You Know?",
-    content: "Seattle's January 2025 law requires gig platforms to provide clear deactivation reasons and human review of appeals. More cities are following this model — know your rights!"
+    content: "Seattle's January 2025 law requires gig platforms to provide clear deactivation reasons and human review of appeals. More cities are adopting similar disclosure requirements."
   };
 
   return (

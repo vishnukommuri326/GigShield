@@ -9,9 +9,9 @@ import AppealWizard from './pages/AppealWizard';
 import NoticeAnalyzer from './pages/NoticeAnalyzer';
 import AppealTracker from './pages/AppealTracker';
 import EvidenceOrganizer from './pages/EvidenceOrganizer';
-import RightsChatbot from './pages/RightsChatbot';
+import InsightsExplorer from './pages/InsightsExplorer';
 import KnowledgeBase from './pages/KnowledgeBase';
-import Rights from './pages/Rights';
+import PolicyInsights from './pages/PolicyInsights';
 import Account from './pages/Account';
 import { useAuth } from './hooks/useAuths';
 import { logout as firebaseLogout } from './services/authService';
@@ -82,12 +82,13 @@ function App() {
         return <EvidenceOrganizer onNavigate={setCurrentPage} />;
       case 'chat':
       case 'chatbot':
-        return <RightsChatbot onNavigate={setCurrentPage} />;
+      case 'insights':
+        return <InsightsExplorer onNavigate={setCurrentPage} />;
       case 'knowledge':
       case 'knowledge-base':
         return <KnowledgeBase onNavigate={setCurrentPage} />;
-      case 'rights':
-        return <Rights onNavigate={setCurrentPage} />;
+      case 'policy-insights':
+        return <PolicyInsights onNavigate={setCurrentPage} />;
       case 'account':
         return <Account onNavigate={setCurrentPage} />;
       default:

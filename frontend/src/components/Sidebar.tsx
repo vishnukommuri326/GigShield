@@ -31,8 +31,8 @@ const Sidebar = ({ currentPage, onNavigate, onClose, onLogout }: SidebarProps) =
     { id: 'analyzer', icon: Search, label: 'Notice Analyzer' },
     { id: 'tracker', icon: CheckCircle, label: 'Appeal Tracker' },
     { id: 'evidence', icon: FolderOpen, label: 'Evidence Organizer' },
-    { id: 'chat', icon: MessageSquare, label: 'Rights Chatbot' },
-    { id: 'knowledge', icon: BookMarked, label: 'Know Your Rights' },
+    { id: 'insights', icon: MessageSquare, label: 'Policy Insights' },
+    { id: 'knowledge', icon: BookMarked, label: 'Platform Data' },
     { id: 'account', icon: User, label: 'Account' },
   ];
 

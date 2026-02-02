@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { Upload, FileText, Image, Video, Trash2, Download, CheckCircle, Circle, AlertTriangle, Camera, MessageSquare, MapPin, BarChart3, Calendar, Clock, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Upload, FileText, Image, Video, Trash2, Download, CheckCircle, Circle, AlertTriangle, Camera, MessageSquare, MapPin, BarChart3, Calendar, Clock, Plus, Eye } from 'lucide-react';
+import { useAuth } from '../hooks/useAuths';
+import { uploadEvidence } from '../services/apiService';
 
 interface EvidenceOrganizerProps {
   onNavigate: (page: string) => void;
@@ -13,6 +15,7 @@ interface EvidenceItem {
   uploadDate: string;
   tags: string[];
   category: string;
+  url?: string;
 }
 
 interface Incident {
@@ -25,9 +28,13 @@ interface Incident {
 }
 
 const EvidenceOrganizer = ({ onNavigate }: EvidenceOrganizerProps) => {
+  const { user } = useAuth();
   const [selectedDeactivationType, setSelectedDeactivationType] = useState<string>('ratings');
   const [showIncidentForm, setShowIncidentForm] = useState(false);
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [previewFile, setPreviewFile] = useState<{ url: string; type: string; name: string } | null>(null);
   
   const [newIncident, setNewIncident] = useState({
     date: '',
@@ -143,6 +150,64 @@ const EvidenceOrganizer = ({ onNavigate }: EvidenceOrganizerProps) => {
     if (percentage >= 80) return { label: 'Strong', color: 'text-green-600', bg: 'bg-green-100' };
     if (percentage >= 50) return { label: 'Moderate', color: 'text-yellow-600', bg: 'bg-yellow-100' };
     return { label: 'Weak', color: 'text-red-600', bg: 'bg-red-100' };
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/heic', 'image/webp', 'application/pdf', 'video/mp4'];
+    if (!validTypes.includes(file.type)) {
+      setUploadError('Please upload images (JPG, PNG), PDFs, or videos (MP4) only');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('File size must be less than 10MB');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError('');
+
+    try {
+      const result = await uploadEvidence(file);
+      
+      // Determine file type
+      let fileType: 'image' | 'document' | 'video' = 'document';
+      if (file.type.startsWith('image/')) fileType = 'image';
+      else if (file.type.startsWith('video/')) fileType = 'video';
+
+      // Add to evidence items
+      const newItem: EvidenceItem = {
+        id: Date.now(),
+        name: file.name,
+        type: fileType,
+        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        uploadDate: new Date().toISOString().split('T')[0],
+        tags: [],
+        category: 'Uncategorized',
+        url: result.url
+      };
+
+      setEvidenceItems([...evidenceItems, newItem]);
+      console.log('✓ Evidence uploaded:', result.url);
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setUploadError(err.message || 'Failed to upload file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteEvidence = (id: number) => {
+    setEvidenceItems(evidenceItems.filter(item => item.id !== id));
+  };
+
+  const handlePreviewFile = (item: EvidenceItem) => {
+    if (!item.url) return;
+    setPreviewFile({ url: item.url, type: item.type, name: item.name });
   };
 
   const getFileIcon = (type: string) => {
@@ -450,21 +515,45 @@ const EvidenceOrganizer = ({ onNavigate }: EvidenceOrganizerProps) => {
         {/* Upload Zone */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
           <h2 className="text-xl font-bold text-[#1e3a5f] mb-4">Upload Evidence Files</h2>
-          <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center hover:border-[#0d9488] transition-colors cursor-pointer">
-            <Upload className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-700 mb-2">
-              Drag & Drop Files Here
-            </h3>
-            <p className="text-slate-500 mb-4">
-              Or click to browse your files
-            </p>
-            <p className="text-sm text-slate-400 mb-4">
-              Supports: Images (JPG, PNG), PDFs, Videos (MP4), Screenshots
-            </p>
-            <button className="px-6 py-3 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors font-semibold">
-              Choose Files
-            </button>
-          </div>
+          
+          {uploadError && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <p className="text-red-600">{uploadError}</p>
+            </div>
+          )}
+          
+          <label className="block">
+            <input
+              type="file"
+              onChange={handleFileUpload}
+              accept="image/*,application/pdf,video/mp4"
+              className="hidden"
+              disabled={isUploading}
+            />
+            <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center hover:border-[#0d9488] transition-colors cursor-pointer">
+              <Upload className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-slate-700 mb-2">
+                {isUploading ? 'Uploading...' : 'Drag & Drop Files Here'}
+              </h3>
+              <p className="text-slate-500 mb-4">
+                Or click to browse your files
+              </p>
+              <p className="text-sm text-slate-400 mb-4">
+                Supports: Images (JPG, PNG), PDFs, Videos (MP4), Screenshots
+              </p>
+              <div className="inline-flex items-center gap-2 px-6 py-3 bg-[#0d9488] text-white rounded-lg hover:bg-[#0d9488]/90 transition-colors font-semibold">
+                {isUploading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  'Choose Files'
+                )}
+              </div>
+            </div>
+          </label>
         </div>
 
         {/* Evidence Files List */}
@@ -494,10 +583,28 @@ const EvidenceOrganizer = ({ onNavigate }: EvidenceOrganizerProps) => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="p-2 text-slate-600 hover:text-[#0d9488] hover:bg-slate-100 rounded-lg transition-colors">
-                    <Download className="w-5 h-5" />
+                  <button 
+                    onClick={() => handlePreviewFile(item)}
+                    className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Preview"
+                  >
+                    <Eye className="w-5 h-5" />
                   </button>
-                  <button className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  {item.url && (
+                    <a
+                      href={item.url}
+                      download={item.name}
+                      className="p-2 text-slate-600 hover:text-[#0d9488] hover:bg-slate-100 rounded-lg transition-colors"
+                      title="Download"
+                    >
+                      <Download className="w-5 h-5" />
+                    </a>
+                  )}
+                  <button 
+                    onClick={() => handleDeleteEvidence(item.id)}
+                    className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete"
+                  >
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
@@ -505,6 +612,56 @@ const EvidenceOrganizer = ({ onNavigate }: EvidenceOrganizerProps) => {
             ))}
           </div>
         </div>
+
+        {/* File Preview Modal */}
+        {previewFile && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50" onClick={() => setPreviewFile(null)}>
+            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                <h3 className="text-xl font-bold text-slate-900">{previewFile.name}</h3>
+                <button
+                  onClick={() => setPreviewFile(null)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="p-6 overflow-auto max-h-[calc(90vh-100px)]">
+                {previewFile.type === 'image' && (
+                  <img
+                    src={previewFile.url}
+                    alt={previewFile.name}
+                    className="max-w-full h-auto mx-auto rounded-lg"
+                  />
+                )}
+                {previewFile.type === 'video' && (
+                  <video
+                    src={previewFile.url}
+                    controls
+                    className="max-w-full h-auto mx-auto rounded-lg"
+                  >
+                    Your browser does not support video playback.
+                  </video>
+                )}
+                {previewFile.type === 'document' && (
+                  <div className="text-center">
+                    <FileText className="w-24 h-24 text-slate-400 mx-auto mb-4" />
+                    <p className="text-slate-600 mb-4">PDF preview not available</p>
+                    <a
+                      href={previewFile.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Download className="w-5 h-5" />
+                      Download PDF
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

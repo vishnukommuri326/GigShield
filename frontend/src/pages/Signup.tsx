@@ -283,7 +283,7 @@ const Signup = ({ onNavigate, onSignup }: SignupProps) => {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-600" />
-                Access to Know Your Rights database
+                Access to Platform Policy Database
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-600" />

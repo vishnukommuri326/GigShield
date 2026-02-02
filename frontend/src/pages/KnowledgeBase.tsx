@@ -52,53 +52,53 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
     California: {
       laws: ['AB5 (2019)', 'Prop 22 (2020)', 'AB2257 (2020)'],
       protections: [
-        'Right to detailed explanation for deactivation',
-        'Right to appeal with human review',
-        'Cannot be deactivated for declining low-paying orders',
-        'Right to transparency in rating systems',
-        'Protection against arbitrary deactivation'
+        'Platforms typically provide explanation for deactivation',
+        'Appeal processes with human review available',
+        'Cannot be deactivated solely for declining orders',
+        'Transparency requirements for rating systems',
+        'Deactivation standards defined in contractor agreements'
       ]
     },
     Washington: {
       laws: ['Seattle Gig Worker Protections (2025)', 'PayUp Act'],
       protections: [
-        'Platforms must provide specific reason for deactivation',
-        'Right to appeal with evidence',
-        'Cannot be deactivated without warning for first offense',
-        'Required waiting period before permanent deactivation'
+        'Platforms must provide specific deactivation reason',
+        'Appeal processes with evidence submission',
+        'Warning systems for first-time policy violations',
+        'Multi-step review before permanent deactivation'
       ]
     },
     'New York': {
-      laws: ['NYC Gig Worker Rights (2023)', 'Delivery Worker Protection'],
+      laws: ['NYC Gig Worker Protections (2023)', 'Delivery Worker Standards'],
       protections: [
-        'Right to transparency in deactivation',
-        'Protection against retaliation',
-        'Required notice period before deactivation',
-        'Access to earnings data'
+        'Transparency requirements in deactivation process',
+        'Anti-retaliation provisions',
+        'Notice period requirements for certain deactivations',
+        'Earnings data access provisions'
       ]
     },
     Illinois: {
       laws: ['Labor law protections'],
       protections: [
-        'Right to fair treatment',
-        'Protection against discrimination',
-        'Standard employment protections may apply'
+        'Standard independent contractor provisions',
+        'Anti-discrimination laws apply',
+        'Contract-based remedies available'
       ]
     },
     'New Jersey': {
       laws: ['Independent contractor protections'],
       protections: [
-        'Right to appeal',
-        'Fair treatment requirements',
-        'Transparency in policies'
+        'Appeal mechanisms typically available',
+        'Fair dealing requirements in contracts',
+        'Policy transparency standards'
       ]
     },
     Other: {
-      laws: ['Federal labor laws', 'State-specific protections'],
+      laws: ['Federal labor laws', 'State-specific provisions'],
       protections: [
-        'Basic right to fair treatment',
+        'Standard contract enforcement mechanisms',
         'Federal anti-discrimination laws apply',
-        'Check your state\'s specific gig worker laws'
+        'Check your jurisdiction\'s specific platform regulations'
       ]
     }
   };
@@ -267,7 +267,7 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">
-            Know Your Rights Dashboard
+            Platform Policy Insights
           </h1>
           <p className="text-lg text-slate-600">
             State protections, platform comparisons, and proactive tips to protect your account
@@ -437,7 +437,7 @@ const KnowledgeBase = ({ onNavigate }: KnowledgeBaseProps) => {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Platform</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Appeal Process</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Response Time</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Success Rate</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Typical Response</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Min Rating</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Min Completion</th>
                 </tr>
